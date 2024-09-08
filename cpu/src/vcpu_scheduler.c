@@ -100,29 +100,30 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 
 		for (int j = 0; j < nparams; j++) {
-            printf("Domain %d - Param %d:\n", i, j);
-            printf("  Name: %s\n", params[j].field);
-            printf("  Type: %d\n", params[j].type);
-            switch (params[j].type) {
-                case VIR_TYPED_PARAM_INT:
-                    printf("  Value: %d\n", params[j].value.i);
-                    break;
-                case VIR_TYPED_PARAM_UINT:
-                    printf("  Value: %u\n", params[j].value.ui);
-                    break;
-                case VIR_TYPED_PARAM_LLONG:
-                    printf("  Value: %lld\n", params[j].value.l);
-                    break;
-                case VIR_TYPED_PARAM_ULLONG:
-                    printf("  Value: %llu\n", params[j].value.ul);
-                    break;
-                case VIR_TYPED_PARAM_STRING:
-                    printf("  Value: %s\n", params[j].value.s);
-                    break;
-                default:
-                    printf("  Value: (unknown type)\n");
-                    break;
-            }
+			if (params[j].field === "cpu_time")
+			{
+				switch (params[j].type) {
+					case VIR_TYPED_PARAM_INT:
+						printf("  Value int: %d\n", params[j].value.i);
+						break;
+					case VIR_TYPED_PARAM_UINT:
+						printf("  Value uint: %u\n", params[j].value.ui);
+						break;
+					case VIR_TYPED_PARAM_LLONG:
+						printf("  Value llong: %lld\n", params[j].value.l);
+						break;
+					case VIR_TYPED_PARAM_ULLONG:
+						printf("  Value ullong: %llu\n", params[j].value.ul);
+						break;
+					case VIR_TYPED_PARAM_STRING:
+						printf("  Value string: %s\n", params[j].value.s);
+						break;
+					default:
+						printf("  Value: (unknown type)\n");
+						break;
+            	}
+			}
+            
         }
 
         free(params);
