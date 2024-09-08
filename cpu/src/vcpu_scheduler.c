@@ -66,7 +66,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 {
 	virDomainPtr *domains, domain;
 	int ndomains, result, nparams;
-	unsigned char *cpuMaps;
 	virTypedParameterPtr params;
 
 	// 2. get all active running VMs
@@ -81,10 +80,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	{
 		// 3. collect vcpu stats
 		domain = domains[i];
-        if (virDomainGetInfo(domain, &domainInfo) < 0) {
-            fprintf(stderr, "Failed to get domain info for domain %d\n", i);
-            continue;
-        }
 
 		nparams = virDomainGetCPUStats(domain, NULL, 0, -1, 1, 0);
 		if (nparams < 0)
@@ -113,7 +108,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
                     printf("  Value: %d\n", params[j].value.i);
                     break;
                 case VIR_TYPED_PARAM_UINT:
-                    printf("  Value: %u\n", params[j].value.u);
+                    printf("  Value: %u\n", params[j].value.ui);
                     break;
                 case VIR_TYPED_PARAM_LLONG:
                     printf("  Value: %lld\n", params[j].value.l);
@@ -122,7 +117,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
                     printf("  Value: %llu\n", params[j].value.ul);
                     break;
                 case VIR_TYPED_PARAM_STRING:
-                    printf("  Value: %s\n", params[j].value.str);
+                    printf("  Value: %s\n", params[j].value.s);
                     break;
                 default:
                     printf("  Value: (unknown type)\n");
