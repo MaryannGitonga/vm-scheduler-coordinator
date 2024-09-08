@@ -100,7 +100,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 
 		for (int j = 0; j < nparams; j++) {
-			if (params[j].field === "cpu_time")
+			if (params[j].field == "cpu_time")
 			{
 				switch (params[j].type) {
 					case VIR_TYPED_PARAM_INT:
