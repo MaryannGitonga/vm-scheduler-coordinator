@@ -139,7 +139,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			{
 				unsigned long long vcpuTime = params[j].value.ul;
 				for (int k = 0; k < npcpus; k++) {
-					if (VIR_CPU_USED(cpuMaps[k])) {
+					if (VIR_CPU_USED(cpuMaps, k)) {
                         pcpuLoads[k] += vcpuTime;
                     }
 				}
