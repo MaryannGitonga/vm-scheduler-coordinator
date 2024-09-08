@@ -67,6 +67,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	virDomainPtr *domains, domain;
 	int ndomains, result, nparams;
 	virTypedParameterPtr params;
+	virDomainInfo domainInfo;
 
 	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -80,6 +81,15 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	{
 		// 3. collect vcpu stats
 		domain = domains[i];
+
+		result = virDomainGetInfo(domain, &domainInfo);
+
+		if (result < 0) {
+            fprintf(stderr, "Failed to get domain info for domain %d\n", i);
+            continue;
+        }
+
+		printf("Domain %d - CPU Time: %llu nanoseconds\n", i, domainInfo.cpuTime);
 
 		nparams = virDomainGetCPUStats(domain, NULL, 0, -1, 1, 0);
 		if (nparams < 0)
@@ -104,7 +114,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			{
 				printf("  CPU time for domain %d: %llu\n", i, params[j].value.ul);
 			}
-            
         }
 
         free(params);
