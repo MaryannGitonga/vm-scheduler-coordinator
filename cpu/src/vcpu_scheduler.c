@@ -127,9 +127,10 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 			for (int k = 0; k < npcpuParams; k++)
 			{
-				if (pcpuParams[k].cpu_time < minLoad)
+				long long totalLoad = pcpuParams[k].user + pcpuParams[k].kernel;
+				if (totalLoad < minLoad)
 				{
-					minLoad = pcpuParams[k].cpu_time;
+					minLoad = totalLoad;
 					bestpcpu = k;
 				}
 			}
