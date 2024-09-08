@@ -65,9 +65,9 @@ int main(int argc, char *argv[])
 void CPUScheduler(virConnectPtr conn, int interval)
 {
 	virDomainPtr *domains, domain;
-	int ndomains, result, nparams, npcpuStats, npcpus;
+	int ndomains, result, nparams, npcpus;
 	virTypedParameterPtr params;
-	virNodeCPUStatsPtr pcpuStats;
+	// virNodeCPUStatsPtr pcpuStats;
 
 	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -85,20 +85,20 @@ void CPUScheduler(virConnectPtr conn, int interval)
         return;
     }
 
-	pcpuStats = calloc(npcpus, sizeof(virNodeCPUStats));
-	npcpuStats = virNodeGetCPUStats(conn, -1, NULL, 0, 0);
+	// pcpuStats = calloc(npcpus, sizeof(virNodeCPUStats));
+	// npcpuStats = virNodeGetCPUStats(conn, -1, NULL, 0, 0);
 
-	printf("nparams for pcpu stats...%d", npcpuStats);
+	// printf("nparams for pcpu stats...%d", npcpuStats);
 
-	for (int i = 0; i < npcpus; i++) {
-		result = virNodeGetCPUStats(conn, i, pcpuStats, &npcpuStats, 0);
-		if (result < 0) {
-			fprintf(stderr, "Failed to get pCPU stats for pCPU %d\n", i);
-			free(pcpuStats);
-			free(domains);
-			return;
-		}
-	}
+	// for (int i = 0; i < npcpus; i++) {
+	// 	result = virNodeGetCPUStats(conn, i, pcpuStats, &npcpuStats, 0);
+	// 	if (result < 0) {
+	// 		fprintf(stderr, "Failed to get pCPU stats for pCPU %d\n", i);
+	// 		free(pcpuStats);
+	// 		free(domains);
+	// 		return;
+	// 	}
+	// }
 
 	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
 
