@@ -65,9 +65,9 @@ int main(int argc, char *argv[])
 void CPUScheduler(virConnectPtr conn, int interval)
 {
 	virDomainPtr *domains, domain;
-	int ndomains, result, nparams;
+	int ndomains, result, nparams, npcpuStats, npcpus;
 	virTypedParameterPtr params;
-	virDomainInfo domainInfo;
+	virNodeCPUStatsPtr pcpuStats;
 
 	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -77,19 +77,40 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		return;
 	}
 
+	// 3. get pcpu stats
+	npcpus = virNodeGetCPUMap(conn, NULL, NULL, 0);
+    if (npcpus < 0) {
+        fprintf(stderr, "Failed to get number of pcpus\n");
+        free(domains);
+        return;
+    }
+
+	pcpuStats = calloc(npcpus, sizeof(virNodeCPUStats));
+	npcpuStats = VIR_NODE_CPU_STATS_ALL_CPUS;
+
+	for (int i = 0; i < npcpus; i++) {
+		result = virNodeGetCPUStats(conn, i, pcpuStats, &npcpuStats, 0);
+		if (result < 0) {
+			fprintf(stderr, "Failed to get pCPU stats for pCPU %d\n", i);
+			free(pcpuStats);
+			free(domains);
+			return;
+		}
+
+		for (int i = 0; i < nparams; i++) {
+			if (strcmp(pcpuStats[j].field, "cpu_time") == 0) {
+				printf("CPU time for pCPU %d: %llu\n", k, pcpuStats[j].value.ul);
+			}
+		}
+	}
+
+	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
+
 	for (int i = 0; i < ndomains; i++)
 	{
 		// 3. collect vcpu stats
+		// chose virDomainGetCPUStats over virDomainGetInfo because of the level of accuracy in cpu time value
 		domain = domains[i];
-
-		result = virDomainGetInfo(domain, &domainInfo);
-
-		if (result < 0) {
-            fprintf(stderr, "Failed to get domain info for domain %d\n", i);
-            continue;
-        }
-
-		printf("Domain %d - CPU Time: %llu nanoseconds\n", i, domainInfo.cpuTime);
 
 		nparams = virDomainGetCPUStats(domain, NULL, 0, -1, 1, 0);
 		if (nparams < 0)
@@ -109,20 +130,53 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
+		// 5. determine map affinity -> 1 vcpu per domain
+		unsigned char *cpuMaps = calloc(1, VIR_CPU_MAPLEN(npcpus));
+		result = virDomainGetVcpuPinInfo(domain, 1, cpuMaps, VIR_CPU_MAPLEN(npcpus), 0);
+		if (result < 0) {
+			fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
+			free(params);
+			free(cpuMaps);
+			continue;
+		}
+
 		for (int j = 0; j < nparams; j++) {
 			if (strcmp(params[j].field, "cpu_time") == 0)
 			{
-				printf("  CPU time for domain %d: %llu\n", i, params[j].value.ul);
+				unsigned long long vcpuTime = params[j].value.ul;
+				for (int k = 0; k < npcpus; k++) {
+					if (VIR_CPU_ISSET(k, cpuMaps)) {
+						pcpuLoads[k] += vcpuTime;
+					}
+				}
+				printf("  CPU time for domain %d: %llu\n", i, vcpuTime);
 			}
         }
 
-        free(params);
-
-		// 5. determine map affinity
-
 		// 6. find "best" pcpu to pin vcpu
+		int bestPCPU = 0;
+		long long minLoad = pcpuLoads[0];
+		for (int k = 1; k < npcpus; k++) {
+			if (pcpuLoads[k] < minLoad) {
+				bestPCPU = k;
+				minLoad = pcpuLoads[k];
+			}
+		}
 
 		// 7. change pcpu assigned to vcpu
+		unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
+		memset(bestPCPUMap, 0, VIR_CPU_MAPLEN(npcpus));
+		VIR_CPU_SET(bestPCPU, bestPCPUMap);
+
+		result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
+		if (result < 0) {
+			fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
+		}
+
+		free(bestPCPUMap);
+
+		free(params);
+		free(cpuMaps);
 	}
 
 	free(domains);
