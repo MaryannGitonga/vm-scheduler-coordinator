@@ -96,12 +96,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			free(domains);
 			return;
 		}
-
-		for (int j = 0; j < nparams; j++) {
-			if (strcmp(pcpuStats[j].field, "cpu_time") == 0) {
-				printf("CPU time for pCPU %d: %llu\n", i, pcpuStats[j].value.ul);
-			}
-		}
 	}
 
 	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
@@ -145,9 +139,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			{
 				unsigned long long vcpuTime = params[j].value.ul;
 				for (int k = 0; k < npcpus; k++) {
-					if (VIR_CPU_USED(k, cpuMaps)) {
-						pcpuLoads[k] += vcpuTime;
-					}
+					if (VIR_CPU_USED(cpuMaps[k])) {
+                        pcpuLoads[k] += vcpuTime;
+                    }
 				}
 				printf("  CPU time for domain %d: %llu\n", i, vcpuTime);
 			}
@@ -166,7 +160,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		// 7. change pcpu assigned to vcpu
 		unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
 		memset(bestPCPUMap, 0, VIR_CPU_MAPLEN(npcpus));
-		VIR_CPU_USED(bestPCPU, bestPCPUMap);
+        bestPCPUMap[bestPCPU / 8] |= (1 << (bestPCPU % 8));
 
 		result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
 		if (result < 0) {
@@ -174,11 +168,12 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 
 		free(bestPCPUMap);
-
 		free(params);
 		free(cpuMaps);
 	}
 
+	free(pcpuLoads);
+    free(pcpuStats);
 	free(domains);
 }
 
