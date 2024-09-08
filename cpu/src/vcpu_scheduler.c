@@ -64,93 +64,81 @@ int main(int argc, char *argv[])
 /* COMPLETE THE IMPLEMENTATION */
 void CPUScheduler(virConnectPtr conn, int interval)
 {
-	virDomainPtr *domains;
-	int ndomains, npcpuParams, result, nvcpus, npcpus;
-	virNodeCPUStatsPtr pcpuParams;
+	virDomainPtr *domains, domain;
+	int ndomains, result, nparams;
 	unsigned char *cpuMaps;
+	virTypedParameterPtr params;
 
-	// collect host pcpu stats
-	npcpus = virNodeGetCPUMap(conn, NULL, NULL, 0);
-	if (npcpus < 0) {
-        fprintf(stderr, "Failed to get npcpus\n");
-        return;
-    }
-
-	if (virNodeGetCPUStats(conn, -1, NULL, &npcpuParams, 0) < 0)
-	{
-		fprintf(stderr, "Failed to get nparams for pcpu stats\n");
-        return;
-	}
-
-	pcpuParams = calloc(npcpuParams, sizeof(virNodeCPUStats));
-	result = virNodeGetCPUStats(conn, -1, pcpuParams, &npcpuParams, 0);
-	if (result < 0) {
-        fprintf(stderr, "Failed to get pcpu stats\n");
-        free(pcpuParams);
-        return;
-    }
-
-	// get all active running VMs
+	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
 
 	if(ndomains < 0){
 		fprintf(stderr, "Failed to get active running VMs\n");
-		free(pcpuParams);
 		return;
 	}
-	
-	// collect vcpu stats
+
 	for (int i = 0; i < ndomains; i++)
 	{
-		// get the number of vcpus in the domain
-        nvcpus = virDomainGetMaxVcpus(domains[i]);
-        if (nvcpus < 0) {
-            fprintf(stderr, "Failed to get nvcpus for domain %d\n", i);
+		// 3. collect vcpu stats
+		domain = domains[i];
+        if (virDomainGetInfo(domain, &domainInfo) < 0) {
+            fprintf(stderr, "Failed to get domain info for domain %d\n", i);
             continue;
         }
 
-        // cpuMaps = malloc(nvcpus * VIR_CPU_MAPLEN(npcpus));
-
-		// Single vcpu or multiple? (above is multiple)
-		cpuMaps = malloc(VIR_CPU_MAPLEN(npcpus));
-        if (cpuMaps == NULL) {
-            fprintf(stderr, "Failed to allocate memory for CPU maps\n");
-            continue;
-        }
-        memset(cpuMaps, 0, VIR_CPU_MAPLEN(npcpus));
-
-		// determine best pcpu
-		for (int j = 0; j < nvcpus; j++)
+		nparams = virDomainGetCPUStats(domain, NULL, 0, -1, 1, 0);
+		if (nparams < 0)
 		{
-			int bestpcpu = -1;
-			long long minLoad = LLONG_MAX;
-
-			for (int k = 0; k < npcpuParams; k++)
-			{
-				long long totalLoad = pcpuParams[k].user + pcpuParams[k].kernel;
-				if (totalLoad < minLoad)
-				{
-					minLoad = totalLoad;
-					bestpcpu = k;
-				}
-			}
-
-			if (bestpcpu != -1)
-			{
-				cpuMaps[bestpcpu / 8] |= (1 << (bestpcpu % 8));
-
-				result = virDomainPinVcpu(domains[i], j, cpuMaps, VIR_CPU_MAPLEN(npcpus));
-				if (result < 0)
-				{
-					fprintf(stderr, "Failed to pin vcpu %d to pcpu %d for domain %d\n", j, bestpcpu, i);
-				}
-			}
+			fprintf(stderr, "Failed to the num of parameter for domain %d\n", i);
+			continue;
 		}
 
-		free(cpuMaps);
+		params = calloc(nparams, sizeof(virTypedParameter));
+
+		result = virDomainGetCPUStats(domain, params, nparams, -1, 1, 0);
+
+		if (result < 0)
+		{
+			fprintf(stderr, "Failed to get vcpu stats for domain %d\n", i);
+			free(params);
+			continue;
+		}
+
+		for (int j = 0; j < nparams; j++) {
+            printf("Domain %d - Param %d:\n", i, j);
+            printf("  Name: %s\n", params[j].field);
+            printf("  Type: %d\n", params[j].type);
+            switch (params[j].type) {
+                case VIR_TYPED_PARAM_INT:
+                    printf("  Value: %d\n", params[j].value.i);
+                    break;
+                case VIR_TYPED_PARAM_UINT:
+                    printf("  Value: %u\n", params[j].value.u);
+                    break;
+                case VIR_TYPED_PARAM_LLONG:
+                    printf("  Value: %lld\n", params[j].value.l);
+                    break;
+                case VIR_TYPED_PARAM_ULLONG:
+                    printf("  Value: %llu\n", params[j].value.ul);
+                    break;
+                case VIR_TYPED_PARAM_STRING:
+                    printf("  Value: %s\n", params[j].value.str);
+                    break;
+                default:
+                    printf("  Value: (unknown type)\n");
+                    break;
+            }
+        }
+
+        free(params);
+
+		// 5. determine map affinity
+
+		// 6. find "best" pcpu to pin vcpu
+
+		// 7. change pcpu assigned to vcpu
 	}
 
-	free(pcpuParams);
 	free(domains);
 }
 
