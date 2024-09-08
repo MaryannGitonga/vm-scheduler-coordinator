@@ -97,9 +97,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			return;
 		}
 
-		for (int i = 0; i < nparams; i++) {
+		for (int j = 0; j < nparams; j++) {
 			if (strcmp(pcpuStats[j].field, "cpu_time") == 0) {
-				printf("CPU time for pCPU %d: %llu\n", k, pcpuStats[j].value.ul);
+				printf("CPU time for pCPU %d: %llu\n", i, pcpuStats[j].value.ul);
 			}
 		}
 	}
