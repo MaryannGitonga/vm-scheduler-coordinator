@@ -175,7 +175,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	free(pcpuLoads);
-    free(pcpuStats);
+    // free(pcpuStats);
 	free(domains);
 }
 
