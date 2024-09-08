@@ -136,6 +136,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
+		memset(pcpuLoads, 0, npcpus * sizeof(long long));
+
 		for (int j = 0; j < nparams; j++) {
 			if (strcmp(params[j].field, "cpu_time") == 0)
 			{
