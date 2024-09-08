@@ -102,26 +102,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		for (int j = 0; j < nparams; j++) {
 			if (strcmp(params[j].field, "cpu_time") == 0)
 			{
-				switch (params[j].type) {
-					case VIR_TYPED_PARAM_INT:
-						printf("  Value int: %d\n", params[j].value.i);
-						break;
-					case VIR_TYPED_PARAM_UINT:
-						printf("  Value uint: %u\n", params[j].value.ui);
-						break;
-					case VIR_TYPED_PARAM_LLONG:
-						printf("  Value llong: %lld\n", params[j].value.l);
-						break;
-					case VIR_TYPED_PARAM_ULLONG:
-						printf("  Value ullong: %llu\n", params[j].value.ul);
-						break;
-					case VIR_TYPED_PARAM_STRING:
-						printf("  Value string: %s\n", params[j].value.s);
-						break;
-					default:
-						printf("  Value: (unknown type)\n");
-						break;
-            	}
+				printf("  CPU time for domain %d: %llu\n", i, params[j].value.ul);
 			}
             
         }
