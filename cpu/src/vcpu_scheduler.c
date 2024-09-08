@@ -88,6 +88,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	pcpuStats = calloc(npcpus, sizeof(virNodeCPUStats));
 	npcpuStats = virNodeGetCPUStats(conn, -1, NULL, 0, 0);
 
+	printf("nparams for pcpu stats...%d", npcpuStats);
+
 	for (int i = 0; i < npcpus; i++) {
 		result = virNodeGetCPUStats(conn, i, pcpuStats, &npcpuStats, 0);
 		if (result < 0) {
