@@ -145,7 +145,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			{
 				unsigned long long vcpuTime = params[j].value.ul;
 				for (int k = 0; k < npcpus; k++) {
-					if (VIR_CPU_ISSET(k, cpuMaps)) {
+					if (VIR_CPU_USED(k, cpuMaps)) {
 						pcpuLoads[k] += vcpuTime;
 					}
 				}
@@ -166,7 +166,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		// 7. change pcpu assigned to vcpu
 		unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
 		memset(bestPCPUMap, 0, VIR_CPU_MAPLEN(npcpus));
-		VIR_CPU_SET(bestPCPU, bestPCPUMap);
+		VIR_CPU_USED(bestPCPU, bestPCPUMap);
 
 		result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
 		if (result < 0) {
