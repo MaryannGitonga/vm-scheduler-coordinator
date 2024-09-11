@@ -132,9 +132,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				for (int k = 0; k < npcpus; k++) {
 					if (VIR_CPU_USED(cpuMap, k)) {
                         pcpuLoads[k] += vcpuTime;
+						printf("In here....%llu\n", vcpuTime);
                     }
 				}
-				break;
 			}
         }
 
