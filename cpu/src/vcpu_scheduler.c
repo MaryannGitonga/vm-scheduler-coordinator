@@ -145,7 +145,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		printf("Previous pcpu load....%llu\n", previousPcpuLoads[i]);
         if (previousPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] - previousPcpuLoads[i];
-            double usagePercentage = (double)usage / (10 ** 9);
+            double usagePercentage = (double)usage / pow(10, 9);
             printf("CPU %d usage: %.2f%%\n", i, usagePercentage * 100);
         }
         previousPcpuLoads[i] = pcpuLoads[i];
