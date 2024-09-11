@@ -135,14 +135,14 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	// Find the highest load to initialize minLoad
-	long long maxLoad = LLONG_MIN;
-	for (int i = 0; i < npcpus; i++) {
-		if (pcpuLoads[i] > maxLoad) {
-			maxLoad = pcpuLoads[i];
-		}
-	}
+	// long long maxLoad = LLONG_MIN;
+	// for (int i = 0; i < npcpus; i++) {
+	// 	if (pcpuLoads[i] > maxLoad) {
+	// 		maxLoad = pcpuLoads[i];
+	// 	}
+	// }
 
-	long long minLoad = maxLoad;
+	// long long minLoad = maxLoad;
 
 	for (int i = 0; i < ndomains; i++)
 	{
@@ -150,13 +150,26 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		// 6. find "best" pcpu to pin vcpu
 		int bestPCPU = -1;
+		long long minLoad = LLONG_MAX;
 
 		for (int j = 0; j < npcpus; j++) {
-			printf("Load %llu is in pcpu %d\n", pcpuLoads[j], j);
-			// try print out each pcpuLoad and min load... and the best cpu picked
-			if (pcpuLoads[j] < minLoad) {
+			unsigned long long predictedLoad = pcpuLoads[j];
+            unsigned long long vcpuTime = 0;
+
+			// Retrieve vcpu time for the current domain
+			for (int k = 0; k < nparams; k++) {
+                if (strcmp(params[k].field, "cpu_time") == 0) {
+                    vcpuTime = params[k].value.ul;
+                    break;
+                }
+            }
+
+			// Predict the load if this vcpu were assigned to pcpu j
+            predictedLoad += vcpuTime;
+
+			if (predictedLoad <= 100 && predictedLoad < minLoad) {
 				bestPCPU = j;
-				minLoad = pcpuLoads[j];
+				minLoad = predictedLoad;
 			}
 		}
 
@@ -189,7 +202,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 			for (int k = 0; k < npcpus; k++) {
                 if (VIR_CPU_USED(currentPCPUMap, k)) {
-                    pcpuLoads[k] -= params[0].value.ul; // Adjust based on your logic
+                    pcpuLoads[k] -= params[0].value.ul;
                 }
             }
             pcpuLoads[bestPCPU] += params[0].value.ul;
