@@ -72,12 +72,11 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
 
-	if(ndomains < 0){
+	if(ndomains < 0) {
 		fprintf(stderr, "Failed to get active running VMs\n");
 		return;
 	}
 
-	// 3. get pcpu stats
 	npcpus = virNodeGetCPUMap(conn, NULL, NULL, 0);
     if (npcpus < 0) {
         fprintf(stderr, "Failed to get number of pcpus\n");
@@ -87,8 +86,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
 
-	for (int i = 0; i < ndomains; i++)
-	{
+	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
 		// chose virDomainGetCPUStats over virDomainGetInfo because of the level of accuracy in cpu time value
 		domain = domains[i];
@@ -110,23 +108,21 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 
 		// 5. determine map affinity -> 1 vcpu per domain
-		unsigned char *cpuMaps = calloc(1, VIR_CPU_MAPLEN(npcpus));
-		result = virDomainGetVcpuPinInfo(domain, 1, cpuMaps, VIR_CPU_MAPLEN(npcpus), 0);
+		unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
+		result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
 		if (result < 0) {
 			fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
 			free(params);
-			free(cpuMaps);
+			free(cpuMap);
 			continue;
 		}
 
-		// memset(pcpuLoads, 0, npcpus * sizeof(long long));
-
+		// 3. get pcpu stats
 		for (int j = 0; j < nparams; j++) {
-			if (strcmp(params[j].field, "cpu_time") == 0)
-			{
+			if (strcmp(params[j].field, "cpu_time") == 0) {
 				unsigned long long vcpuTime = params[j].value.ul;
 				for (int k = 0; k < npcpus; k++) {
-					if (VIR_CPU_USED(cpuMaps, k)) {
+					if (VIR_CPU_USED(cpuMap, k)) {
                         pcpuLoads[k] += vcpuTime;
                     }
 				}
@@ -135,19 +131,41 @@ void CPUScheduler(virConnectPtr conn, int interval)
         }
 
 		free(params);
-		free(cpuMaps);
+		free(cpuMap);
+	}
+
+	// Find the highest load to initialize minLoad
+	long long maxLoad = LLONG_MIN;
+	for (int i = 0; i < npcpus; i++) {
+		if (pcpuLoads[i] > maxLoad) {
+			maxLoad = pcpuLoads[i];
+		}
+	}
+
+	long long minLoad = maxLoad;
+
+	for (int i = 0; i < ndomains; i++)
+	{
+		domain = domains[i];
 
 		// 6. find "best" pcpu to pin vcpu
-		int bestPCPU = 0;
-		long long minLoad = pcpuLoads[0];
-		for (int k = 1; k < npcpus; k++) {
-			printf("Load %llu is in pcpu %d", pcpuLoads[k], k);
+		int bestPCPU = -1;
+
+		for (int j = 1; j < npcpus; j++) {
+			printf("Load %llu is in pcpu %d", pcpuLoads[j], j);
 			// try print out each pcpuLoad and min load... and the best cpu picked
-			if (pcpuLoads[k] < minLoad) {
-				bestPCPU = k;
-				minLoad = pcpuLoads[k];
+			if (pcpuLoads[j] < minLoad) {
+				bestPCPU = j;
+				minLoad = pcpuLoads[j];
 			}
 		}
+
+		if (bestPCPU == -1)
+		{
+			fprintf(stderr, "No valid pCPU found\n");
+			continue;
+		}
+		
 
 		printf("Min load %llu is in pcpu %d", minLoad, bestPCPU);
 
@@ -159,11 +177,28 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
 		if (result < 0) {
 			fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
+		} else {
+			unsigned char *currentPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
+			result = virDomainGetVcpuPinInfo(domain, 1, currentPCPUMap, VIR_CPU_MAPLEN(npcpus), 0);
+
+			if (result < 0) {
+				fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
+				free(bestPCPUMap);
+				free(currentPCPUMap);
+				continue;
+			}
+			for (int k = 0; k < npcpus; k++) {
+                if (VIR_CPU_USED(currentPCPUMap, k)) {
+                    pcpuLoads[k] -= params[0].value.ul; // Adjust based on your logic
+                }
+            }
+            pcpuLoads[bestPCPU] += params[0].value.ul;
+			free(currentPCPUMap);
 		}
 
-		pcpuLoads[bestPCPU] += params[j].value.ul;
 		free(bestPCPUMap);
 	}
+	
 
 	free(pcpuLoads);
 	free(domains);
