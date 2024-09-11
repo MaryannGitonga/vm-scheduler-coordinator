@@ -151,7 +151,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		// 6. find "best" pcpu to pin vcpu
 		int bestPCPU = -1;
 
-		for (int j = 1; j < npcpus; j++) {
+		for (int j = 0; j < npcpus; j++) {
 			printf("Load %llu is in pcpu %d\n", pcpuLoads[j], j);
 			// try print out each pcpuLoad and min load... and the best cpu picked
 			if (pcpuLoads[j] < minLoad) {
