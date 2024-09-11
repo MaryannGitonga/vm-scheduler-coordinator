@@ -67,7 +67,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	virDomainPtr *domains, domain;
 	int ndomains, result, nparams, npcpus;
 	virTypedParameterPtr params;
-	// virNodeCPUStatsPtr pcpuStats;
+	static long long *previousPcpuLoads = NULL;
 
 	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -88,7 +88,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
-		// chose virDomainGetCPUStats over virDomainGetInfo because of the level of accuracy in cpu time value
 		domain = domains[i];
 
 		nparams = virDomainGetCPUStats(domain, NULL, 0, -1, 1, 0);
@@ -126,7 +125,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
                         pcpuLoads[k] += vcpuTime;
                     }
 				}
-				// printf("  CPU time for domain %d: %llu\n", i, vcpuTime);
+				break;
 			}
         }
 
@@ -134,15 +133,14 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		free(cpuMap);
 	}
 
-	// Find the highest load to initialize minLoad
-	// long long maxLoad = LLONG_MIN;
-	// for (int i = 0; i < npcpus; i++) {
-	// 	if (pcpuLoads[i] > maxLoad) {
-	// 		maxLoad = pcpuLoads[i];
-	// 	}
-	// }
-
-	// long long minLoad = maxLoad;
+	for (int i = 0; i < npcpus; i++) {
+        if (previousPcpuLoads[i] != 0) {
+            long long usage = pcpuLoads[i] - previousPcpuLoads[i];
+            double usagePercentage = (double)usage / (interval * 1000000000);
+            printf("CPU %d usage: %.2f%%\n", i, usagePercentage * 100);
+        }
+        previousPcpuLoads[i] = pcpuLoads[i];
+    }
 
 	for (int i = 0; i < ndomains; i++)
 	{
@@ -220,7 +218,3 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	free(pcpuLoads);
 	free(domains);
 }
-
-
-
-
