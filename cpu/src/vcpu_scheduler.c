@@ -166,12 +166,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 			// Predict the load if this vcpu were assigned to pcpu j
             predictedLoad += vcpuTime;
+			printf("Predicted load....%llu\n", predictedLoad);
+			printf("Min load....%llu\n", minLoad);
 
 			if (predictedLoad <= 100 && predictedLoad < minLoad) {
 				bestPCPU = j;
 				minLoad = predictedLoad;
 			}
 		}
+
+		printf("Final min load....%llu\n", minLoad);
 
 		if (bestPCPU == -1)
 		{
