@@ -67,7 +67,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	virDomainPtr *domains, domain;
 	int ndomains, result, nparams, npcpus;
 	virTypedParameterPtr params;
-	static long long *previousPcpuLoads = NULL;
+	static long long *previousPcpuLoads;
 
 	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -133,6 +133,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		free(cpuMap);
 	}
 
+	previousPcpuLoads = calloc(npcpus, sizeof(long long));
 	for (int i = 0; i < npcpus; i++) {
         if (previousPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] - previousPcpuLoads[i];
@@ -141,6 +142,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
         }
         previousPcpuLoads[i] = pcpuLoads[i];
     }
+
+	free(previousPcpuLoads);
 
 	for (int i = 0; i < ndomains; i++)
 	{
