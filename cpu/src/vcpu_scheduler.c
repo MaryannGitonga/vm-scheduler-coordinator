@@ -145,6 +145,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		printf("Previous pcpu load....%llu\n", previousPcpuLoads[i]);
         if (previousPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] - previousPcpuLoads[i];
+			printf("CPU %d usage: %llu\n", i, usage);
             double usagePercentage = (double)usage / pow(10, 9);
             printf("CPU %d usage: %.2f%%\n", i, usagePercentage * 100);
         }
@@ -162,6 +163,15 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		for (int j = 0; j < npcpus; j++) {
 			unsigned long long predictedLoad = pcpuLoads[j];
             unsigned long long vcpuTime = 0;
+
+			params = calloc(nparams, sizeof(virTypedParameter));
+			result = virDomainGetCPUStats(domain, params, nparams, -1, 1, 0);
+			if (result < 0)
+			{
+				fprintf(stderr, "Failed to get vcpu stats for domain %d\n", i);
+				free(params);
+				continue;
+			}
 
 			// Retrieve vcpu time for the current domain
 			for (int k = 0; k < nparams; k++) {
