@@ -152,7 +152,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		int bestPCPU = -1;
 
 		for (int j = 1; j < npcpus; j++) {
-			printf("Load %llu is in pcpu %d", pcpuLoads[j], j);
+			printf("Load %llu is in pcpu %d\n", pcpuLoads[j], j);
 			// try print out each pcpuLoad and min load... and the best cpu picked
 			if (pcpuLoads[j] < minLoad) {
 				bestPCPU = j;
@@ -167,7 +167,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 		
 
-		printf("Min load %llu is in pcpu %d", minLoad, bestPCPU);
+		printf("MIN load %llu is in pcpu %d\n", minLoad, bestPCPU);
 
 		// 7. change pcpu assigned to vcpu
 		unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
