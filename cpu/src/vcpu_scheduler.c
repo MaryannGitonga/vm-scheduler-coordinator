@@ -61,6 +61,23 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
+/* calculate standard deviation of pCPU loads */
+double calculateStandardDev(long long *pcpuLoads, int npcpus) {
+    long long sum = 0;
+    for (int i = 0; i < npcpus; i++) {
+        sum += pcpuLoads[i];
+    }
+    double mean = sum / (double)npcpus;
+
+    double variance = 0.0;
+    for (int i = 0; i < npcpus; i++) {
+        variance += pow(pcpuLoads[i] - mean, 2);
+    }
+    variance /= npcpus;
+    
+    return sqrt(variance);
+}
+
 /* COMPLETE THE IMPLEMENTATION */
 void CPUScheduler(virConnectPtr conn, int interval)
 {
@@ -85,21 +102,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
         return;
     }
 
-	// pcpuStats = calloc(npcpus, sizeof(virNodeCPUStats));
-	// npcpuStats = virNodeGetCPUStats(conn, -1, NULL, 0, 0);
-
-	// printf("nparams for pcpu stats...%d", npcpuStats);
-
-	// for (int i = 0; i < npcpus; i++) {
-	// 	result = virNodeGetCPUStats(conn, i, pcpuStats, &npcpuStats, 0);
-	// 	if (result < 0) {
-	// 		fprintf(stderr, "Failed to get pCPU stats for pCPU %d\n", i);
-	// 		free(pcpuStats);
-	// 		free(domains);
-	// 		return;
-	// 	}
-	// }
-
 	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
 
 	for (int i = 0; i < ndomains; i++)
@@ -111,14 +113,12 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		nparams = virDomainGetCPUStats(domain, NULL, 0, -1, 1, 0);
 		if (nparams < 0)
 		{
-			fprintf(stderr, "Failed to the num of parameter for domain %d\n", i);
+			fprintf(stderr, "Failed to the nparams for domain %d\n", i);
 			continue;
 		}
 
 		params = calloc(nparams, sizeof(virTypedParameter));
-
 		result = virDomainGetCPUStats(domain, params, nparams, -1, 1, 0);
-
 		if (result < 0)
 		{
 			fprintf(stderr, "Failed to get vcpu stats for domain %d\n", i);
@@ -136,7 +136,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		memset(pcpuLoads, 0, npcpus * sizeof(long long));
+		// memset(pcpuLoads, 0, npcpus * sizeof(long long));
 
 		for (int j = 0; j < nparams; j++) {
 			if (strcmp(params[j].field, "cpu_time") == 0)
@@ -151,33 +151,42 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
         }
 
-		// 6. find "best" pcpu to pin vcpu
-		int bestPCPU = 0;
-		long long minLoad = pcpuLoads[0];
-		for (int k = 1; k < npcpus; k++) {
-			if (pcpuLoads[k] < minLoad) {
-				bestPCPU = k;
-				minLoad = pcpuLoads[k];
-			}
-		}
-
-		// 7. change pcpu assigned to vcpu
-		unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
-		memset(bestPCPUMap, 0, VIR_CPU_MAPLEN(npcpus));
-        bestPCPUMap[bestPCPU / 8] |= (1 << (bestPCPU % 8));
-
-		result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
-		if (result < 0) {
-			fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
-		}
-
-		free(bestPCPUMap);
 		free(params);
 		free(cpuMaps);
+
+		// Calculate standard deviation
+		double stddev = calculateStandardDev(pcpuLoads, npcpus);
+		printf("Standard deviation of pCPU loads: %.2f\n", stddev);
+
+		if (stddev >= 5.0) {
+			printf("System is unbalanced. Adjusting pinning...\n");
+
+			// 6. find "best" pcpu to pin vcpu
+			int bestPCPU = 0;
+			long long minLoad = pcpuLoads[0];
+			for (int k = 1; k < npcpus; k++) {
+				// try print out each pcpuLoad and min load... and the best cpu picked
+				if (pcpuLoads[k] < minLoad) {
+					bestPCPU = k;
+					minLoad = pcpuLoads[k];
+				}
+			}
+
+			// 7. change pcpu assigned to vcpu
+			unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
+			memset(bestPCPUMap, 0, VIR_CPU_MAPLEN(npcpus));
+			bestPCPUMap[bestPCPU / 8] |= (1 << (bestPCPU % 8));
+
+			result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
+			if (result < 0) {
+				fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
+			}
+
+			free(bestPCPUMap);
+		}
 	}
 
 	free(pcpuLoads);
-    // free(pcpuStats);
 	free(domains);
 }
 
