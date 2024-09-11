@@ -132,7 +132,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				for (int k = 0; k < npcpus; k++) {
 					if (VIR_CPU_USED(cpuMap, k)) {
                         pcpuLoads[k] += vcpuTime;
-						printf("In here....%llu\n", vcpuTime);
                     }
 				}
 			}
@@ -143,6 +142,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	for (int i = 0; i < npcpus; i++) {
+		printf("Previous pcpu load....%llu", previousPcpuLoads[i]);
         if (previousPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] - previousPcpuLoads[i];
             double usagePercentage = (double)usage / (interval * 1000000000);
