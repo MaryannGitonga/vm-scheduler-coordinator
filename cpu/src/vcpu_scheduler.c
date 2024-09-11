@@ -142,7 +142,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	for (int i = 0; i < npcpus; i++) {
-		printf("Previous pcpu load....%llu", previousPcpuLoads[i]);
+		printf("Previous pcpu load....%llu\n", previousPcpuLoads[i]);
         if (previousPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] - previousPcpuLoads[i];
             double usagePercentage = (double)usage / (interval * 1000000000);
@@ -173,8 +173,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 			// Predict the load if this vcpu were assigned to pcpu j
             predictedLoad += vcpuTime;
-			printf("Predicted load....%llu\n", predictedLoad);
-			printf("Min load....%llu\n", minLoad);
+			// printf("Predicted load....%llu\n", predictedLoad);
+			// printf("Min load....%llu\n", minLoad);
 
 			if (predictedLoad <= 100 && predictedLoad < minLoad) {
 				bestPCPU = j;
@@ -182,7 +182,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 		}
 
-		printf("Final min load....%llu\n", minLoad);
+		// printf("Final min load....%llu\n", minLoad);
 
 		if (bestPCPU == -1)
 		{
@@ -191,7 +191,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 		
 
-		printf("MIN load %llu is in pcpu %d\n", minLoad, bestPCPU);
+		// printf("MIN load %llu is in pcpu %d\n", minLoad, bestPCPU);
 
 		// 7. change pcpu assigned to vcpu
 		unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
