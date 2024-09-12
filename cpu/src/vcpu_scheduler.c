@@ -56,6 +56,8 @@ int main(int argc, char *argv[])
 		sleep(interval);
 	}
 
+	cleanupScheduler();
+
 	// Closing the connection
 	virConnectClose(conn);
 	return 0;
@@ -67,7 +69,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	virDomainPtr *domains, domain;
 	int ndomains, result, nparams, npcpus;
 	virTypedParameterPtr params;
-	static long long *previousPcpuLoads = NULL;
+	static long long *prevPcpuLoads = NULL;
 
 	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -84,10 +86,10 @@ void CPUScheduler(virConnectPtr conn, int interval)
         return;
     }
 
-	if (previousPcpuLoads == NULL) {
-        previousPcpuLoads = calloc(npcpus, sizeof(long long));
-        if (previousPcpuLoads == NULL) {
-            fprintf(stderr, "Failed to allocate memory for previousPcpuLoads\n");
+	if (prevPcpuLoads == NULL) {
+        prevPcpuLoads = calloc(npcpus, sizeof(long long));
+        if (prevPcpuLoads == NULL) {
+            fprintf(stderr, "Failed to allocate memory for prevPcpuLoads\n");
             free(domains);
             return;
         }
@@ -141,15 +143,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		free(cpuMap);
 	}
 
+	// compute & save percentages
+	double *pcpuPercentages = calloc(npcpus, sizeof(double));
 	for (int i = 0; i < npcpus; i++) {
-		printf("Previous pcpu load....%llu\n", previousPcpuLoads[i]);
-        if (previousPcpuLoads[i] != 0) {
-            long long usage = pcpuLoads[i] - previousPcpuLoads[i];
-			printf("CPU %d usage: %llu\n", i, usage);
-            double usagePercentage = (double)usage / pow(10, 9);
-            printf("CPU %d usage: %.2f%%\n", i, usagePercentage * 100);
+        if (prevPcpuLoads[i] != 0) {
+            long long usage = pcpuLoads[i] - prevPcpuLoads[i];
+            double usagePercentage = ((double)usage / (interval * 1e9)) * 100;
+            pcpuPercentages[i] = usagePercentage;
+            printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
         }
-        previousPcpuLoads[i] = pcpuLoads[i];
+        prevPcpuLoads[i] = pcpuLoads[i];
     }
 
 	for (int i = 0; i < ndomains; i++)
@@ -158,50 +161,20 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		// 6. find "best" pcpu to pin vcpu
 		int bestPCPU = -1;
-		long long minLoad = LLONG_MAX;
+		long long minLoad = 100.0;
 
 		for (int j = 0; j < npcpus; j++) {
-			unsigned long long predictedLoad = pcpuLoads[j];
-            unsigned long long vcpuTime = 0;
-
-			params = calloc(nparams, sizeof(virTypedParameter));
-			result = virDomainGetCPUStats(domain, params, nparams, -1, 1, 0);
-			if (result < 0)
-			{
-				fprintf(stderr, "Failed to get vcpu stats for domain %d\n", i);
-				free(params);
-				continue;
-			}
-
-			// Retrieve vcpu time for the current domain
-			for (int k = 0; k < nparams; k++) {
-                if (strcmp(params[k].field, "cpu_time") == 0) {
-                    vcpuTime = params[k].value.ul;
-                    break;
-                }
+			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] <= 100.0) {
+                bestPCPU = j;
+                minLoad = pcpuPercentages[j];
             }
-
-			// Predict the load if this vcpu were assigned to pcpu j
-            predictedLoad += vcpuTime;
-			// printf("Predicted load....%llu\n", predictedLoad);
-			// printf("Min load....%llu\n", minLoad);
-
-			if (predictedLoad <= 100 && predictedLoad < minLoad) {
-				bestPCPU = j;
-				minLoad = predictedLoad;
-			}
 		}
-
-		// printf("Final min load....%llu\n", minLoad);
 
 		if (bestPCPU == -1)
 		{
 			fprintf(stderr, "No valid pCPU found\n");
 			continue;
 		}
-		
-
-		// printf("MIN load %llu is in pcpu %d\n", minLoad, bestPCPU);
 
 		// 7. change pcpu assigned to vcpu
 		unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
@@ -221,19 +194,35 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				free(currentPCPUMap);
 				continue;
 			}
+
 			for (int k = 0; k < npcpus; k++) {
                 if (VIR_CPU_USED(currentPCPUMap, k)) {
                     pcpuLoads[k] -= params[0].value.ul;
+					long long usage = pcpuLoads[k] - prevPcpuLoads[k];
+					double usagePercentage = ((double)usage / (interval * 1e9)) * 100;
+					pcpuPercentages[k] = usagePercentage;
                 }
             }
             pcpuLoads[bestPCPU] += params[0].value.ul;
+			long long usage = pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU];
+			double usagePercentage = ((double)usage / (interval * 1e9)) * 100;
+			pcpuPercentages[bestPCPU] = usagePercentage;
+
 			free(currentPCPUMap);
 		}
 
 		free(bestPCPUMap);
 	}
-	
 
 	free(pcpuLoads);
+	free(pcpuPercentages);
 	free(domains);
+}
+
+void cleanupScheduler()
+{
+    if (prevPcpuLoads != NULL) {
+        free(prevPcpuLoads);
+        prevPcpuLoads = NULL;
+    }
 }
