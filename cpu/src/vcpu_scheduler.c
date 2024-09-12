@@ -146,7 +146,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < npcpus; i++) {
         if (prevPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] - prevPcpuLoads[i];
-            double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
+            double usagePercentage = ((double)usage / (1000000000)) * 100;
             pcpuPercentages[i] = usagePercentage;
             printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
         }
@@ -197,13 +197,13 @@ void CPUScheduler(virConnectPtr conn, int interval)
                 if (VIR_CPU_USED(currentPCPUMap, k)) {
                     pcpuLoads[k] -= params[0].value.ul;
 					long long usage = pcpuLoads[k] - prevPcpuLoads[k];
-					double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
+					double usagePercentage = ((double)usage / (1000000000)) * 100;
 					pcpuPercentages[k] = usagePercentage;
                 }
             }
             pcpuLoads[bestPCPU] += params[0].value.ul;
 			long long usage = pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU];
-			double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
+			double usagePercentage = ((double)usage / (1000000000)) * 100;
 			pcpuPercentages[bestPCPU] = usagePercentage;
 
 			free(currentPCPUMap);
