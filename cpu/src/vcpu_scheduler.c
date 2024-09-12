@@ -56,8 +56,6 @@ int main(int argc, char *argv[])
 		sleep(interval);
 	}
 
-	cleanupScheduler();
-
 	// Closing the connection
 	virConnectClose(conn);
 	return 0;
@@ -217,12 +215,4 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	free(pcpuLoads);
 	free(pcpuPercentages);
 	free(domains);
-}
-
-void cleanupScheduler()
-{
-    if (prevPcpuLoads != NULL) {
-        free(prevPcpuLoads);
-        prevPcpuLoads = NULL;
-    }
 }
