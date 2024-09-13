@@ -94,6 +94,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
     }
 
 	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
+	memset(pcpuLoads, 0, sizeof(long long) * npcpus);
 
 	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
@@ -142,7 +143,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	// compute & save percentages
-	//TODO: if this doesn't work out, can I use standard dev?
+	// total pcpu time is eq to the interval... so convert that to nano seconds
 	double *pcpuPercentages = calloc(npcpus, sizeof(double));
 	for (int i = 0; i < npcpus; i++) {
         if (prevPcpuLoads[i] != 0) {
@@ -197,10 +198,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		// substract vcpu time from its soon-to-be prev pcpu
 		for (int k = 0; k < npcpus; k++) {
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
-				pcpuLoads[k] -= params[0].value.ul;
-				long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
-				double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
-				pcpuPercentages[k] = usagePercentage;
+				for (int j = 0; j < nparams; j++) {
+					if (strcmp(params[j].field, "cpu_time") == 0) {
+						unsigned long long vcpuTime = params[j].value.ul;
+						long long vcpuUsage = vcpuTime >= prevPcpuLoads[k] ? vcpuTime - prevPcpuLoads[k] : 0;
+						pcpuLoads[k] -= vcpuUsage;
+						long long usageAfterRepin = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
+						double usagePercentageAfterRepin = ((double)usageAfterRepin / (interval * 1000000000)) * 100;
+						pcpuPercentages[k] = usagePercentageAfterRepin;
+					}
+				}
 			}
 		}
 
@@ -209,10 +216,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
 		} else {
 			// add vcpu time to new pcpu
-            pcpuLoads[bestPCPU] += params[0].value.ul;
-			long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
-			double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
-			pcpuPercentages[bestPCPU] = usagePercentage;
+            for (int j = 0; j < nparams; j++) {
+				if (strcmp(params[j].field, "cpu_time") == 0) {
+					unsigned long long vcpuTime = params[j].value.ul;
+					long long vcpuUsage = vcpuTime >= prevPcpuLoads[bestPCPU] ? vcpuTime - prevPcpuLoads[bestPCPU] : 0;
+					pcpuLoads[bestPCPU] -= vcpuUsage;
+					long long usageAfterRepin = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
+					double usagePercentageAfterRepin = ((double)usageAfterRepin / (interval * 1000000000)) * 100;
+					pcpuPercentages[bestPCPU] = usagePercentageAfterRepin;
+				}
+			}
 		}
 
 		free(currentPCPUMap);
