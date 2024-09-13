@@ -142,10 +142,12 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	// compute & save percentages
+	//TODO: if this doesn't work out, can I use standard dev?
 	double *pcpuPercentages = calloc(npcpus, sizeof(double));
 	for (int i = 0; i < npcpus; i++) {
         if (prevPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] - prevPcpuLoads[i];
+			printf("CPU %d.... Prev: %llu, Curr: %llu, Usage: %llu", i, prevPcpuLoads[i], pcpuLoads[i], usage);
             double usagePercentage = ((double)usage / (1000000000)) * 100;
             pcpuPercentages[i] = usagePercentage;
             printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
@@ -162,10 +164,13 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		long long minLoad = 100.0;
 
 		for (int j = 0; j < npcpus; j++) {
-			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] <= 100.0) {
-                bestPCPU = j;
-                minLoad = pcpuPercentages[j];
-            }
+			if (prevPcpuLoads[j] != 0)
+			{ // execute only when the percentage is set (run this on VM)
+				if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] <= 100.0) {
+					bestPCPU = j;
+					minLoad = pcpuPercentages[j];
+            	}
+			}
 		}
 
 		if (bestPCPU == -1)
@@ -193,6 +198,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				continue;
 			}
 
+			// confirm this VIR_CPU_USED... is it not supposed to subtract the load from the pcpu that the vcpu was taken from?
 			for (int k = 0; k < npcpus; k++) {
                 if (VIR_CPU_USED(currentPCPUMap, k)) {
                     pcpuLoads[k] -= params[0].value.ul;
