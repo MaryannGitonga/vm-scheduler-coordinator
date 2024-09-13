@@ -184,6 +184,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		memset(bestPCPUMap, 0, VIR_CPU_MAPLEN(npcpus));
 		bestPCPUMap[bestPCPU / 8] |= (1 << (bestPCPU % 8));
 
+		// substract vcpu time from its soon-to-be prev pcpu
+		for (int k = 0; k < npcpus; k++) {
+			if (VIR_CPU_USED(currentPCPUMap, k)) {
+				pcpuLoads[k] -= params[0].value.ul;
+				long long usage = pcpuLoads[k] - prevPcpuLoads[k];
+				double usagePercentage = ((double)usage / (1000000000)) * 100;
+				pcpuPercentages[k] = usagePercentage;
+			}
+		}
+
 		result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
 		if (result < 0) {
 			fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
@@ -198,15 +208,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				continue;
 			}
 
-			// confirm this VIR_CPU_USED... is it not supposed to subtract the load from the pcpu that the vcpu was taken from?
-			for (int k = 0; k < npcpus; k++) {
-                if (VIR_CPU_USED(currentPCPUMap, k)) {
-                    pcpuLoads[k] -= params[0].value.ul;
-					long long usage = pcpuLoads[k] - prevPcpuLoads[k];
-					double usagePercentage = ((double)usage / (1000000000)) * 100;
-					pcpuPercentages[k] = usagePercentage;
-                }
-            }
+			// add vcpu time to new pcpu
             pcpuLoads[bestPCPU] += params[0].value.ul;
 			long long usage = pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU];
 			double usagePercentage = ((double)usage / (1000000000)) * 100;
