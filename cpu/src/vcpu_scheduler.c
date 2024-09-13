@@ -146,7 +146,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	double *pcpuPercentages = calloc(npcpus, sizeof(double));
 	for (int i = 0; i < npcpus; i++) {
         if (prevPcpuLoads[i] != 0) {
-            long long usage = pcpuLoads[i] - prevPcpuLoads[i];
+			// ternary operator to avoid overflow when curr load is less than prev load
+            long long usage = pcpuLoads[i] >= prevPcpuLoads[i] ? pcpuLoads[i] - prevPcpuLoads[i] : 0;
 			printf("CPU %d.... Prev: %llu, Curr: %llu, Usage: %llu", i, prevPcpuLoads[i], pcpuLoads[i], usage);
             double usagePercentage = ((double)usage / (1000000000)) * 100;
             pcpuPercentages[i] = usagePercentage;
@@ -164,12 +165,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		long long minLoad = 100.0;
 
 		for (int j = 0; j < npcpus; j++) {
-			if (prevPcpuLoads[j] != 0)
-			{ // execute only when the percentage is set (run this on VM)
-				if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] <= 100.0) {
-					bestPCPU = j;
-					minLoad = pcpuPercentages[j];
-            	}
+			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] <= 100.0) {
+				bestPCPU = j;
+				minLoad = pcpuPercentages[j];
 			}
 		}
 
@@ -198,7 +196,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		for (int k = 0; k < npcpus; k++) {
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
 				pcpuLoads[k] -= params[0].value.ul;
-				long long usage = pcpuLoads[k] - prevPcpuLoads[k];
+				long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
 				double usagePercentage = ((double)usage / (1000000000)) * 100;
 				pcpuPercentages[k] = usagePercentage;
 			}
@@ -210,7 +208,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		} else {
 			// add vcpu time to new pcpu
             pcpuLoads[bestPCPU] += params[0].value.ul;
-			long long usage = pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU];
+			long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
 			double usagePercentage = ((double)usage / (1000000000)) * 100;
 			pcpuPercentages[bestPCPU] = usagePercentage;
 		}
