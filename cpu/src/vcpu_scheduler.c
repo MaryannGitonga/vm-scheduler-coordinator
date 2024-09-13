@@ -184,6 +184,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		memset(bestPCPUMap, 0, VIR_CPU_MAPLEN(npcpus));
 		bestPCPUMap[bestPCPU / 8] |= (1 << (bestPCPU % 8));
 
+		unsigned char *currentPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
+		result = virDomainGetVcpuPinInfo(domain, 1, currentPCPUMap, VIR_CPU_MAPLEN(npcpus), 0);
+
+		if (result < 0) {
+			fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
+			free(bestPCPUMap);
+			free(currentPCPUMap);
+			continue;
+		}
+
 		// substract vcpu time from its soon-to-be prev pcpu
 		for (int k = 0; k < npcpus; k++) {
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
@@ -198,25 +208,14 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		if (result < 0) {
 			fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
 		} else {
-			unsigned char *currentPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
-			result = virDomainGetVcpuPinInfo(domain, 1, currentPCPUMap, VIR_CPU_MAPLEN(npcpus), 0);
-
-			if (result < 0) {
-				fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-				free(bestPCPUMap);
-				free(currentPCPUMap);
-				continue;
-			}
-
 			// add vcpu time to new pcpu
             pcpuLoads[bestPCPU] += params[0].value.ul;
 			long long usage = pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU];
 			double usagePercentage = ((double)usage / (1000000000)) * 100;
 			pcpuPercentages[bestPCPU] = usagePercentage;
-
-			free(currentPCPUMap);
 		}
 
+		free(currentPCPUMap);
 		free(bestPCPUMap);
 	}
 
