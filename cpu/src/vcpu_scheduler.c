@@ -149,7 +149,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			// ternary operator to avoid overflow when curr load is less than prev load
             long long usage = pcpuLoads[i] >= prevPcpuLoads[i] ? pcpuLoads[i] - prevPcpuLoads[i] : 0;
 			printf("CPU %d.... Prev: %llu, Curr: %llu, Usage: %llu\n", i, prevPcpuLoads[i], pcpuLoads[i], usage);
-            double usagePercentage = ((double)usage / (1000000000)) * 100;
+            double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
             pcpuPercentages[i] = usagePercentage;
             printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
         }
@@ -173,7 +173,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		printf("Best PCPU: %d\n", bestPCPU);
 
-		if (bestPCPU == -1)
+		if (bestPCPU == -1 && minLoad < 100)
 		{
 			fprintf(stderr, "No valid pCPU found\n");
 			continue;
@@ -199,7 +199,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
 				pcpuLoads[k] -= params[0].value.ul;
 				long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
-				double usagePercentage = ((double)usage / (1000000000)) * 100;
+				double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
 				pcpuPercentages[k] = usagePercentage;
 			}
 		}
@@ -211,7 +211,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			// add vcpu time to new pcpu
             pcpuLoads[bestPCPU] += params[0].value.ul;
 			long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
-			double usagePercentage = ((double)usage / (1000000000)) * 100;
+			double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
 			pcpuPercentages[bestPCPU] = usagePercentage;
 		}
 
