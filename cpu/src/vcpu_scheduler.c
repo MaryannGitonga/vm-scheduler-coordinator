@@ -200,7 +200,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
 				for (int j = 0; j < nparams; j++) {
 					if (strcmp(params[j].field, "cpu_time") == 0) {
-						pcpuLoads[k] -= params[0=j].value.ul;
+						pcpuLoads[k] -= params[j].value.ul;
 						long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
 						double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
 						pcpuPercentages[k] = usagePercentage;
@@ -216,7 +216,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			// add vcpu time to new pcpu
             for (int j = 0; j < nparams; j++) {
 				if (strcmp(params[j].field, "cpu_time") == 0) {
-					pcpuLoads[bestPCPU] -= params[0=j].value.ul;
+					pcpuLoads[bestPCPU] -= params[j].value.ul;
 					long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
 					double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
 					pcpuPercentages[bestPCPU] = usagePercentage;
