@@ -171,7 +171,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 		}
 
-		printf("Best PCPU: %d\n", bestPCPU)
+		printf("Best PCPU: %d\n", bestPCPU);
 
 		if (bestPCPU == -1)
 		{
