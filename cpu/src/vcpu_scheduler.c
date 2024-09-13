@@ -200,12 +200,10 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
 				for (int j = 0; j < nparams; j++) {
 					if (strcmp(params[j].field, "cpu_time") == 0) {
-						unsigned long long vcpuTime = params[j].value.ul;
-						long long vcpuUsage = vcpuTime >= prevPcpuLoads[k] ? vcpuTime - prevPcpuLoads[k] : 0;
-						pcpuLoads[k] -= vcpuUsage;
-						long long usageAfterRepin = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
-						double usagePercentageAfterRepin = ((double)usageAfterRepin / (interval * 1000000000)) * 100;
-						pcpuPercentages[k] = usagePercentageAfterRepin;
+						pcpuLoads[k] -= params[0=j].value.ul;
+						long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
+						double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
+						pcpuPercentages[k] = usagePercentage;
 					}
 				}
 			}
@@ -218,12 +216,10 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			// add vcpu time to new pcpu
             for (int j = 0; j < nparams; j++) {
 				if (strcmp(params[j].field, "cpu_time") == 0) {
-					unsigned long long vcpuTime = params[j].value.ul;
-					long long vcpuUsage = vcpuTime >= prevPcpuLoads[bestPCPU] ? vcpuTime - prevPcpuLoads[bestPCPU] : 0;
-					pcpuLoads[bestPCPU] -= vcpuUsage;
-					long long usageAfterRepin = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
-					double usagePercentageAfterRepin = ((double)usageAfterRepin / (interval * 1000000000)) * 100;
-					pcpuPercentages[bestPCPU] = usagePercentageAfterRepin;
+					pcpuLoads[bestPCPU] -= params[0=j].value.ul;
+					long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
+					double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
+					pcpuPercentages[bestPCPU] = usagePercentage;
 				}
 			}
 		}
