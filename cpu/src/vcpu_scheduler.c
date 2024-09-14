@@ -193,12 +193,14 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 	
 	if (are_cpus_balanced) {
+		printf("CPUs are balanced. No repinning needed\n");
 		goto clean_up;
 	}
 	
 
 	for (int i = 0; i < ndomains; i++)
 	{
+		printf("Checking whether to repin domain %d\n", i);
 		domain = domains[i];
 
 		// 6. find "best" pcpu to pin vcpu
