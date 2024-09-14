@@ -164,8 +164,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		domain = domains[i];
 
 		// 6. find "best" pcpu to pin vcpu
-		int bestPCPU = 0;
-		long long minLoad = pcpuLoads[0];
+		int bestPCPU = -1;
+		long long minLoad = interval * pow(10, 9);
 
 		for (int j = 0; j < npcpus; j++) {
 			if (pcpuLoads[j] < minLoad) {
