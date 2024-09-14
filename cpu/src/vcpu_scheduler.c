@@ -96,6 +96,11 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
 	long long *pcpuUsages = calloc(npcpus, sizeof(long long));
+	if (pcpuUsages == NULL)
+	{
+		fprintf(stderr, "Failed to create pcpuUsages\n");
+	}
+	
 
 	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
@@ -260,7 +265,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	free(pcpuLoads);
+	printf("About to free usages...\n");
 	free(pcpuUsages);
+	printf("Freed usages...\n");
 	// free(pcpuPercentages);
 	free(domains);
 }
