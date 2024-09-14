@@ -198,6 +198,22 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
+		nparams = virDomainGetCPUStats(domain, NULL, 0, -1, 1, 0);
+		if (nparams < 0)
+		{
+			fprintf(stderr, "Failed to the nparams for domain %d\n", i);
+			continue;
+		}
+
+		params = calloc(nparams, sizeof(virTypedParameter));
+		result = virDomainGetCPUStats(domain, params, nparams, -1, 1, 0);
+		if (result < 0)
+		{
+			fprintf(stderr, "Failed to get vcpu stats for domain %d\n", i);
+			free(params);
+			continue;
+		}
+
 		// substract vcpu time from its soon-to-be prev pcpu
 		printf("Current CPU Map %x\n", currentPCPUMap[0]);
 		for (int k = 0; k < npcpus; k++) {
@@ -234,6 +250,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 		}
 
+		free(params);
 		free(currentPCPUMap);
 		free(bestPCPUMap);
 	}
