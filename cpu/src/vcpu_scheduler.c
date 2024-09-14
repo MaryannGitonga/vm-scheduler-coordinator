@@ -144,16 +144,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	// compute & save percentages
 	// total pcpu time is eq to the interval... so convert that to nano seconds
-	double *pcpuPercentages = calloc(npcpus, sizeof(double));
+	// double *pcpuPercentages = calloc(npcpus, sizeof(double));
 	for (int i = 0; i < npcpus; i++) {
-        if (prevPcpuLoads[i] != 0) {
-			// ternary operator to avoid overflow when curr load is less than prev load
-            long long usage = pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0;
-			printf("CPU %d.... Prev: %llu, Curr: %llu, Usage: %llu\n", i, prevPcpuLoads[i], pcpuLoads[i], usage);
-            double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
-            pcpuPercentages[i] = usagePercentage;
-            printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
-        }
+        // if (prevPcpuLoads[i] != 0) {
+		// 	// ternary operator to avoid overflow when curr load is less than prev load
+        //     long long usage = pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0;
+		// 	printf("CPU %d.... Prev: %llu, Curr: %llu, Usage: %llu\n", i, prevPcpuLoads[i], pcpuLoads[i], usage);
+        //     double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
+        //     pcpuPercentages[i] = usagePercentage;
+        //     printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
+        // }
         prevPcpuLoads[i] = pcpuLoads[i];
     }
 
@@ -163,18 +163,20 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		// 6. find "best" pcpu to pin vcpu
 		int bestPCPU = -1;
-		long long minLoad = 100.0;
+		double minLoad = 100.0;
 
 		for (int j = 0; j < npcpus; j++) {
-			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] < 100.0) {
+			long long usage = pcpuLoads[j] > prevPcpuLoads[j] ? (pcpuLoads[j] - prevPcpuLoads[j]) : 0;
+			double percentage = (double)usage/(interval * pow(10, 9)) * 100;
+			if (percentage < minLoad && percentage < 100.0) {
 				bestPCPU = j;
-				minLoad = pcpuPercentages[j];
+				minLoad = percentage;
 			}
 		}
 
 		printf("Best PCPU: %d\n", bestPCPU);
 
-		if (bestPCPU == -1 && minLoad < 100)
+		if (bestPCPU == -1)
 		{
 			fprintf(stderr, "No valid pCPU found\n");
 			continue;
@@ -201,9 +203,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				for (int j = 0; j < nparams; j++) {
 					if (strcmp(params[j].field, "cpu_time") == 0) {
 						pcpuLoads[k] -= params[j].value.ul;
-						long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
-						double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
-						pcpuPercentages[k] = usagePercentage;
+						// long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
+						// double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
+						// pcpuPercentages[k] = usagePercentage;
 					}
 				}
 			}
@@ -217,9 +219,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
             for (int j = 0; j < nparams; j++) {
 				if (strcmp(params[j].field, "cpu_time") == 0) {
 					pcpuLoads[bestPCPU] -= params[j].value.ul;
-					long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
-					double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
-					pcpuPercentages[bestPCPU] = usagePercentage;
+					// long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
+					// double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
+					// pcpuPercentages[bestPCPU] = usagePercentage;
 				}
 			}
 		}
@@ -229,6 +231,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	free(pcpuLoads);
-	free(pcpuPercentages);
+	// free(pcpuPercentages);
 	free(domains);
 }
