@@ -145,7 +145,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// compute & save percentages
 	// total pcpu time is eq to the interval... so convert that to nano seconds
 	double *pcpuPercentages = calloc(npcpus, sizeof(double));
-	memset(pcpuPercentages, 0, sizeof(double));
+	memset(pcpuPercentages, 0.0, sizeof(double));
 	for (int i = 0; i < npcpus; i++) {
         if (prevPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0;
@@ -166,10 +166,10 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		double minLoad = 100.0;
 
 		for (int j = 0; j < npcpus; j++) {
+			printf("CPU %d load: %.2f%%\n", j, pcpuPercentages[j]);
 			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] < 100.0) {
 				bestPCPU = j;
 				minLoad = pcpuPercentages[j];
-				printf("CPU %d load: %.2f%%\n", bestPCPU, minLoad);
 			}
 		}
 
