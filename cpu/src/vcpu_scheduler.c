@@ -199,7 +199,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 
 		// substract vcpu time from its soon-to-be prev pcpu
+		printf("Current CPU Map %x\n", currentPCPUMap[0]);
 		for (int k = 0; k < npcpus; k++) {
+			printf("Is domain %d currently pinned to cpu %d %d\n", i, k, VIR_CPU_USED(currentPCPUMap, k));
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
 				for (int j = 0; j < nparams; j++) {
 					if (strcmp(params[j].field, "cpu_time") == 0) {
@@ -213,6 +215,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 		}
 
+		printf("New CPU Map %x, pinning %d\n", bestPCPUMap[0], i);
 		result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
 		if (result < 0) {
 			fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
