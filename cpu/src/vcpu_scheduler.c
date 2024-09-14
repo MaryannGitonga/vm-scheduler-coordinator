@@ -171,7 +171,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			pcpuUsages[i] = 0;
 		}
 		
-		printf("CPU Usage %d usage %llu current cpu time: %llu prev cpu time: %llu\n", i, pcpuUsages[i], pcpuLoads[i], prevPcpuLoads[i]);
+		printf("CPU Usage %d usage %llu (normalized %2f) current cpu time: %llu prev cpu time: %llu\n", i, pcpuUsages[i], (double)pcpuUsages[i] / (double)interval, pcpuLoads[i], prevPcpuLoads[i]);
         
 		prevPcpuLoads[i] = pcpuLoads[i];
 
@@ -180,7 +180,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	pcpuMeanUsage = pcpuMeanUsage / npcpus;
 
-	printf("CPU mean usage %2f\n", pcpuMeanUsage);
+	printf("CPU mean usage %2f normalized %2f\n", pcpuMeanUsage, pcpuMeanUsage);
 
 	// Check whether CPU loads are balanced
 	int are_cpus_balanced = 1;
@@ -254,13 +254,13 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 
 		// substract vcpu time from its soon-to-be prev pcpu
-		printf("Current CPU Map %x\n", currentPCPUMap[0]);
+		// printf("Current CPU Map %x\n", currentPCPUMap[0]);
 		for (int k = 0; k < npcpus; k++) {
-			printf("Is domain %d currently pinned to cpu %d %d\n", i, k, VIR_CPU_USED(currentPCPUMap, k));
+			// printf("Is domain %d currently pinned to cpu %d %d\n", i, k, VIR_CPU_USED(currentPCPUMap, k));
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
-				printf("Domain %d is pinned to cpu %d, attempting update cpu usage\n", i, k);
+				// printf("Domain %d is pinned to cpu %d, attempting update cpu usage\n", i, k);
 				for (int j = 0; j < nparams; j++) {
-					printf("Domain %d is pinned to cpu %d, attempting update cpu usage, checking param %s\n", i, k, params[j].field);
+					// printf("Domain %d is pinned to cpu %d, attempting update cpu usage, checking param %s\n", i, k, params[j].field);
 					if (strcmp(params[j].field, "cpu_time") == 0) {
 						pcpuUsages[k] -= params[j].value.ul;
 						printf("Updated PCPU %d usage: %llu\n", k, pcpuUsages[k]);
@@ -272,7 +272,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 		}
 
-		printf("New CPU Map %x, pinning %d\n", bestPCPUMap[0], i);
+		// printf("New CPU Map %x, pinning %d\n", bestPCPUMap[0], i);
 		result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
 		if (result < 0) {
 			fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
@@ -296,7 +296,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 clean_up:
 	free(pcpuLoads);
-	printf("About to free usages...\n");
+	// printf("About to free usages...\n");
 	free(pcpuUsages);
 	// free(pcpuPercentages);
 	free(domains);
