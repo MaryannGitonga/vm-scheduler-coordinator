@@ -168,6 +168,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		long long minLoad = interval * pow(10, 9);
 
 		for (int j = 0; j < npcpus; j++) {
+			printf("PCPU %d... load: %llu...min-load:%llu\n", j, pcpuLoads[j], minLoad);
 			if (pcpuLoads[j] < minLoad) {
 				bestPCPU = j;
 				minLoad = pcpuLoads[j];
