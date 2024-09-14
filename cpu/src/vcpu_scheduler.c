@@ -203,7 +203,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		for (int k = 0; k < npcpus; k++) {
 			printf("Is domain %d currently pinned to cpu %d %d\n", i, k, VIR_CPU_USED(currentPCPUMap, k));
 			if (VIR_CPU_USED(currentPCPUMap, k)) {
+				printf("Domain %d is pinned to cpu %d, attempting update cpu load\n", i, k);
 				for (int j = 0; j < nparams; j++) {
+					printf("Domain %d is pinned to cpu %d, attempting update cpu load, checking param %s\n", i, k, params[j].field);
 					if (strcmp(params[j].field, "cpu_time") == 0) {
 						pcpuLoads[k] -= params[j].value.ul;
 						printf("Updated PCPU %d load: %llu\n", k, pcpuLoads[k]);
