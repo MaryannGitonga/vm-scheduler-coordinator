@@ -204,6 +204,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				for (int j = 0; j < nparams; j++) {
 					if (strcmp(params[j].field, "cpu_time") == 0) {
 						pcpuLoads[k] -= params[j].value.ul;
+						printf("Updated PCPU %d load: %llu\n", k, pcpuLoads[k])
 						// long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
 						// double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
 						// pcpuPercentages[k] = usagePercentage;
@@ -220,6 +221,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
             for (int j = 0; j < nparams; j++) {
 				if (strcmp(params[j].field, "cpu_time") == 0) {
 					pcpuLoads[bestPCPU] += params[j].value.ul;
+					printf("Updated PCPU %d load: %llu\n", bestPCPU, pcpuLoads[bestPCPU])
 					// long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
 					// double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
 					// pcpuPercentages[bestPCPU] = usagePercentage;
