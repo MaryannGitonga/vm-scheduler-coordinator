@@ -268,7 +268,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	free(pcpuLoads);
 	printf("About to free usages...\n");
-	printf("pcpuUsages pointer %p\n", freeUsages);
+	printf("pcpuUsages pointer %p\n", pcpuUsages);
 	free(pcpuUsages);
 	// free(pcpuPercentages);
 	free(domains);
