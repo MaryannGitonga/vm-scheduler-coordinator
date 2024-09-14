@@ -96,12 +96,11 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	unsigned long long *pcpuLoads = calloc(npcpus, sizeof(long long));
 	unsigned long long *pcpuUsages = calloc(npcpus, sizeof(long long));
+
 	if (pcpuUsages == NULL)
 	{
 		fprintf(stderr, "Failed to create pcpuUsages\n");
 	}
-
-	printf("pcpuUsages assigned pointer %p\n", pcpuUsages);
 	
 
 	for (int i = 0; i < ndomains; i++) {
@@ -164,9 +163,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
         //     pcpuPercentages[i] = usagePercentage;
         //     printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
         // }
-		pcpuUsages[i] = pcpuLoads[i] - prevPcpuLoads[i];
-		printf("CPU Usage %d usage %llu current cpu time: %llu prev cpu time: %llu", i, pcpuUsages[i], pcpuLoads[i], prevPcpuLoads[i]);
-        prevPcpuLoads[i] = pcpuLoads[i];
+		if (pcpuLoads[i] >= prevPcpuLoads[i]) {
+			printf("Current CPU time less than previous CPU time for CPU %d\n", i);
+			pcpuUsages[i] = pcpuLoads[i] - prevPcpuLoads[i];
+		} else {
+			pcpuUsages[i] = 0;
+		}
+		
+		printf("CPU Usage %d usage %llu current cpu time: %llu prev cpu time: %llu\n", i, pcpuUsages[i], pcpuLoads[i], prevPcpuLoads[i]);
+        
+		prevPcpuLoads[i] = pcpuLoads[i];
     }
 
 	for (int i = 0; i < ndomains; i++)
@@ -268,7 +274,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	free(pcpuLoads);
 	printf("About to free usages...\n");
-	printf("pcpuUsages pointer %p\n", pcpuUsages);
 	free(pcpuUsages);
 	// free(pcpuPercentages);
 	free(domains);
