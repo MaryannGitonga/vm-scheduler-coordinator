@@ -94,8 +94,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
         }
     }
 
-	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
-	long long *pcpuUsages = calloc(npcpus, sizeof(long long));
+	unsigned long long *pcpuLoads = calloc(npcpus, sizeof(long long));
+	unsigned long long *pcpuUsages = calloc(npcpus, sizeof(long long));
 	if (pcpuUsages == NULL)
 	{
 		fprintf(stderr, "Failed to create pcpuUsages\n");
@@ -165,6 +165,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
         //     printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
         // }
 		pcpuUsages[i] = pcpuLoads[i] - prevPcpuLoads[i];
+		printf("CPU Usage %d usage %llu current cpu time: %llu prev cpu time: %llu", i, pcpuUsages[i], pcpuLoads[i], prevPcpuLoads[i]);
         prevPcpuLoads[i] = pcpuLoads[i];
     }
 
