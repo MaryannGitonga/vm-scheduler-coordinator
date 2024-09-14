@@ -148,7 +148,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < npcpus; i++) {
         if (prevPcpuLoads[i] != 0) {
 			// ternary operator to avoid overflow when curr load is less than prev load
-            long long usage = pcpuLoads[i] >= prevPcpuLoads[i] ? pcpuLoads[i] - prevPcpuLoads[i] : 0;
+            long long usage = pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0;
 			printf("CPU %d.... Prev: %llu, Curr: %llu, Usage: %llu\n", i, prevPcpuLoads[i], pcpuLoads[i], usage);
             double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
             pcpuPercentages[i] = usagePercentage;
@@ -166,6 +166,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		long long minLoad = 100.0;
 
 		for (int j = 0; j < npcpus; j++) {
+			long long
 			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] < 100.0) {
 				bestPCPU = j;
 				minLoad = pcpuPercentages[j];
