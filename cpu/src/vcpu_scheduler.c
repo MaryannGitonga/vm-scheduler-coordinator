@@ -140,7 +140,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				unsigned long long vcpuTime = params[j].value.ul;
 				for (int k = 0; k < npcpus; k++) {
 					if (VIR_CPU_USED(cpuMap, k)) {
-						printf("Domain %d cpu_time: %llu\n", i, vcpuTime);
+						printf("Domain %d cpu_time: %llu on CPU %d \n", i, vcpuTime, k);
                         pcpuLoads[k] += vcpuTime;
 						break;
                     }
