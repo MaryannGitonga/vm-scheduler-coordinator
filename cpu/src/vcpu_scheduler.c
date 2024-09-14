@@ -169,6 +169,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] < 100.0) {
 				bestPCPU = j;
 				minLoad = pcpuPercentages[j];
+				printf("CPU %d load: %.2f%%\n", bestPCPU, minLoad);
 			}
 		}
 
