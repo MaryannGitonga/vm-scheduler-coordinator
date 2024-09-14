@@ -68,6 +68,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	virDomainPtr *domains, domain;
 	int ndomains, result, nparams, npcpus;
 	virTypedParameterPtr params;
+	double interval_nanos = interval * pow(10, 9);
 	static long long *prevPcpuLoads = NULL;
 
 	// 2. get all active running VMs
@@ -171,7 +172,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			pcpuUsages[i] = 0;
 		}
 		
-		printf("CPU Usage %d usage %llu (normalized %2f) current cpu time: %llu prev cpu time: %llu\n", i, pcpuUsages[i], (double)pcpuUsages[i] / (double)interval, pcpuLoads[i], prevPcpuLoads[i]);
+		printf("CPU Usage %d usage %llu (normalized %2f) current cpu time: %llu prev cpu time: %llu\n", i, pcpuUsages[i], (double)pcpuUsages[i] / interval_nanos, pcpuLoads[i], prevPcpuLoads[i]);
         
 		prevPcpuLoads[i] = pcpuLoads[i];
 
@@ -180,7 +181,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	pcpuMeanUsage = pcpuMeanUsage / npcpus;
 
-	printf("CPU mean usage %2f normalized %2f\n", pcpuMeanUsage, pcpuMeanUsage);
+	printf("CPU mean usage %2f (normalized %2f)\n", pcpuMeanUsage, pcpuMeanUsage / interval_nanos);
 
 	// Check whether CPU loads are balanced
 	int are_cpus_balanced = 1;
