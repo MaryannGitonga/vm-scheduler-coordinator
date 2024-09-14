@@ -148,8 +148,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
         }
 
-		pcpuUsages[i] = pcpuLoads[i] - prevPcpuLoads[i];
-
 		free(params);
 		free(cpuMap);
 	}
@@ -166,6 +164,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
         //     pcpuPercentages[i] = usagePercentage;
         //     printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
         // }
+		pcpuUsages[i] = pcpuLoads[i] - prevPcpuLoads[i];
         prevPcpuLoads[i] = pcpuLoads[i];
     }
 
