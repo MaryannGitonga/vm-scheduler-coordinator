@@ -145,6 +145,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// compute & save percentages
 	// total pcpu time is eq to the interval... so convert that to nano seconds
 	double *pcpuPercentages = calloc(npcpus, sizeof(double));
+	memset(pcpuPercentages, 0, sizeof(double));
 	for (int i = 0; i < npcpus; i++) {
         if (prevPcpuLoads[i] != 0) {
             long long usage = pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0;
