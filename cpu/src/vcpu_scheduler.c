@@ -94,7 +94,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
     }
 
 	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
-	memset(pcpuLoads, 0, sizeof(long long) * npcpus);
 
 	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
@@ -133,6 +132,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				for (int k = 0; k < npcpus; k++) {
 					if (VIR_CPU_USED(cpuMap, k)) {
                         pcpuLoads[k] += vcpuTime;
+						break;
                     }
 				}
 			}
@@ -166,7 +166,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		double minLoad = 100.0;
 
 		for (int j = 0; j < npcpus; j++) {
-			printf("CPU %d load: %.2f%%\n", j, pcpuPercentages[j]);
 			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] < 100.0) {
 				bestPCPU = j;
 				minLoad = pcpuPercentages[j];
@@ -217,7 +216,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			// add vcpu time to new pcpu
             for (int j = 0; j < nparams; j++) {
 				if (strcmp(params[j].field, "cpu_time") == 0) {
-					pcpuLoads[bestPCPU] -= params[j].value.ul;
+					pcpuLoads[bestPCPU] += params[j].value.ul;
 					// long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
 					// double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
 					// pcpuPercentages[bestPCPU] = usagePercentage;
