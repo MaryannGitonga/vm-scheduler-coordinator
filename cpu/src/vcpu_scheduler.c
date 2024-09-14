@@ -155,6 +155,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// total pcpu time is eq to the interval... so convert that to nano seconds
 	// double *pcpuPercentages = calloc(npcpus, sizeof(double));
 	// memset(pcpuPercentages, 0.0, sizeof(double));
+	double pcpuMeanUsage = 0;
 	for (int i = 0; i < npcpus; i++) {
         // if (prevPcpuLoads[i] != 0) {
         //     long long usage = pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0;
@@ -173,7 +174,28 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		printf("CPU Usage %d usage %llu current cpu time: %llu prev cpu time: %llu\n", i, pcpuUsages[i], pcpuLoads[i], prevPcpuLoads[i]);
         
 		prevPcpuLoads[i] = pcpuLoads[i];
+
+		pcpuMeanUsage += pcpuUsages[i];
     }
+
+	pcpuMeanUsage = pcpuMeanUsage / npcpus;
+
+	printf("CPU mean usage %2f\n", pcpuMeanUsage);
+
+	// Check whether CPU loads are balanced
+	int are_cpus_balanced = 1;
+	for (int i = 0; i < npcpus; i++) {
+		// check for 5% deviation from mean
+		if (fabs(pcpuMeanUsage - pcpuUsages[i]) > 0.05 * pcpuMeanUsage) {
+			printf("CPU %d is far from the mean usage. CPU loads are not balanced");
+			are_cpus_balanced = 0;
+		}
+	}
+	
+	if (are_cpus_balanced) {
+		goto clean_up;
+	}
+	
 
 	for (int i = 0; i < ndomains; i++)
 	{
@@ -272,6 +294,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		free(bestPCPUMap);
 	}
 
+clean_up:
 	free(pcpuLoads);
 	printf("About to free usages...\n");
 	free(pcpuUsages);
