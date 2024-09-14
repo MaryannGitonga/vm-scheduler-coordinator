@@ -166,6 +166,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		double minLoad = 100.0;
 
 		for (int j = 0; j < npcpus; j++) {
+			printf("CPU %d... percentage: %.2f%%... min-load: %.2f%%\n", j, pcpuPercentages[j], minLoad);
 			if (pcpuPercentages[j] < minLoad && pcpuPercentages[j] < 100.0) {
 				bestPCPU = j;
 				minLoad = pcpuPercentages[j];
