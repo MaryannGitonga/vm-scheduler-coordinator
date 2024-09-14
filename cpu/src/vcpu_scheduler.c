@@ -164,9 +164,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
         //     printf("CPU %d usage: %.2f%%\n", i, usagePercentage);
         // }
 		if (pcpuLoads[i] >= prevPcpuLoads[i]) {
-			printf("Current CPU time less than previous CPU time for CPU %d\n", i);
 			pcpuUsages[i] = pcpuLoads[i] - prevPcpuLoads[i];
 		} else {
+			printf("Current CPU time less than previous CPU time for CPU %d\n", i);
 			pcpuUsages[i] = 0;
 		}
 		
