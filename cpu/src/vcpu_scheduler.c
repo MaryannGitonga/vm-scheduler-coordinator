@@ -168,6 +168,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		for (int j = 0; j < npcpus; j++) {
 			long long usage = pcpuLoads[j] > prevPcpuLoads[j] ? (pcpuLoads[j] - prevPcpuLoads[j]) : 0;
 			double percentage = (double)usage/(interval * pow(10, 9)) * 100;
+			printf("CPU %d usage: %.2f%%\n", j, percentage);
 			if (percentage < minLoad && percentage < 100.0) {
 				bestPCPU = j;
 				minLoad = percentage;
