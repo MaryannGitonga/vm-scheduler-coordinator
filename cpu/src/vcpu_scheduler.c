@@ -100,6 +100,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	{
 		fprintf(stderr, "Failed to create pcpuUsages\n");
 	}
+
+	printf("pcpuUsages assigned pointer %p\n", pcpuUsages);
 	
 
 	for (int i = 0; i < ndomains; i++) {
@@ -266,8 +268,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	free(pcpuLoads);
 	printf("About to free usages...\n");
-	// free(pcpuUsages);
-	printf("Freed usages...\n");
+	printf("pcpuUsages pointer %p\n", freeUsages);
+	free(pcpuUsages);
 	// free(pcpuPercentages);
 	free(domains);
 }
