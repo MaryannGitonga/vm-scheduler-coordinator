@@ -187,7 +187,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < npcpus; i++) {
 		// check for 5% deviation from mean
 		if (fabs(pcpuMeanUsage - pcpuUsages[i]) > 0.05 * pcpuMeanUsage) {
-			printf("CPU %d is far from the mean usage. CPU loads are not balanced");
+			printf("CPU %d is far from the mean usage. CPU loads are not balanced\n", i);
 			are_cpus_balanced = 0;
 		}
 	}
