@@ -131,30 +131,35 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 
 		// 3. get vcpu time/usage
-		if (strcmp(params[0].field, "vcpu_time") == 0) {
-			double vcpuTimeInSeconds = params[0].value.ul / pow(10, 9);
-			double usage = (vcpuTimeInSeconds - prevVcpuTimes[i])/interval;
-			vcpuUsage[i] = usage;
-			for (int k = 0; k < npcpus; k++) {
-				if (VIR_CPU_USED(cpuMap, k)) {
-					printf("aos_vm_%d on pcpu %d usage: %.2f\n", i + 1, k, vcpuUsage[i]);
-					pcpuUsage[k] += vcpuUsage[i];
+		for (int j = 0; j < nparams; j++)
+		{
+			if (strcmp(params[j].field, "vcpu_time") == 0) {
+				double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
+				double usage = (vcpuTimeInSeconds - prevVcpuTimes[i])/interval;
+				vcpuUsage[i] = usage;
+				for (int k = 0; k < npcpus; k++) {
+					if (VIR_CPU_USED(cpuMap, k)) {
+						printf("aos_vm_%d on pcpu %d usage: %.2f\n", i + 1, k, vcpuUsage[i]);
+						pcpuUsage[k] += vcpuUsage[i];
+						printf("pcpu %d usage: %.2f\n", k, pcpuUsage[k]);
+						break;
+					}
 				}
 
-				printf("pcpu %d usage: %.2f\n", k, pcpuUsage[k]);
+				prevVcpuTimes[i] = vcpuTimeInSeconds;
+				totalCpuUsage += vcpuUsage[i];
+				break;
 			}
-
-			prevVcpuTimes[i] = vcpuTimeInSeconds;
-			totalCpuUsage += vcpuUsage[i];
 		}
+		
 
 		free(params);
 		free(cpuMap);
 	}
 
 	double targetUsagePerPcpu = totalCpuUsage / npcpus;
-	printf("Total usage: %.2f", totalCpuUsage);
-	printf("Target usage per pcpu: %.2f", targetUsagePerPcpu);
+	printf("Total usage: %.2f\n", totalCpuUsage);
+	printf("Target usage per pcpu: %.2f\n", targetUsagePerPcpu);
 
 	// for (int i = 0; i < ndomains; i++)
 	// {
