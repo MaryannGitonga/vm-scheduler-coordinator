@@ -58,7 +58,6 @@ int main(int argc, char *argv[])
 	}
 
 	// Closing the connection
-	free(totalCpuUsage);
 	free(prevVcpuTimes);
 	virConnectClose(conn);
 	return 0;
