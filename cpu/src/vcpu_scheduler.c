@@ -10,7 +10,7 @@
 #define MAX(a,b) ((a)>(b)?a:b)
 
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
-double totalCpuUsage = 0.0;
+double *totalCpuUsage = NULL;
 double *prevVcpuTimes = NULL; // store previous vcpu times
 
 void CPUScheduler(virConnectPtr conn,int interval);
@@ -59,6 +59,7 @@ int main(int argc, char *argv[])
 
 	// Closing the connection
 	free(prevVcpuTimes);
+	free(totalCpuUsage);
 	virConnectClose(conn);
 	return 0;
 }
@@ -90,6 +91,15 @@ void CPUScheduler(virConnectPtr conn, int interval)
         prevVcpuTimes = calloc(8, sizeof(double));
         if (prevVcpuTimes == NULL) {
             fprintf(stderr, "Failed to allocate memory for prevVcpuTimes\n");
+            free(domains);
+            return;
+        }
+    }
+
+	if (totalCpuUsage == NULL) {
+        totalCpuUsage = calloc(1, sizeof(double));
+        if (totalCpuUsage == NULL) {
+            fprintf(stderr, "Failed to allocate memory for totalCpuUsage\n");
             free(domains);
             return;
         }
@@ -145,15 +155,15 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 
 			prevVcpuTimes[i] = vcpuTimeInSeconds;
-			totalCpuUsage += vcpuUsage[i];
+			totalCpuUsage[0] += vcpuUsage[i];
 		}
 
 		free(params);
 		free(cpuMap);
 	}
 
-	double targetUsagePerPcpu = totalCpuUsage / npcpus;
-	printf("Total usage: %.2f", totalCpuUsage);
+	double targetUsagePerPcpu = totalCpuUsage[0] / npcpus;
+	printf("Total usage: %.2f", *);
 	printf("Target usage per pcpu: %.2f", targetUsagePerPcpu);
 
 	// for (int i = 0; i < ndomains; i++)
