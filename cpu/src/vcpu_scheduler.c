@@ -99,7 +99,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	double *vcpuUsage = calloc(8, sizeof(double));
 
 	for (int i = 0; i < ndomains; i++) {
-		// 3. collect vcpu stats
 		domain = domains[i];
 
 		nvcpus = virDomainGetCPUStats(domain, NULL, 0, 0, 0, 0);
@@ -120,7 +119,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		// 5. determine map affinity -> 1 vcpu per domain
 		unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
 		result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
 		if (result < 0) {
@@ -130,7 +128,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		// 3. get vcpu time/usage
 		for (int j = 0; j < nparams; j++)
 		{
 			if (strcmp(params[j].field, "vcpu_time") == 0) {
@@ -161,91 +158,23 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	printf("Total usage: %.2f\n", totalCpuUsage);
 	printf("Target usage per pcpu: %.2f\n", targetUsagePerPcpu);
 
-	// for (int i = 0; i < ndomains; i++)
-	// {
-	// 	domain = domains[i];
+	int pcpusBalanced = 1;
+    for (int i = 0; i < npcpus; i++) {
+        if (fabs(pcpuUsage[i] - targetUsagePerPcpu) > 0.1) {
+            pcpusBalanced = 0;
+            break;
+        }
+    }
 
-	// 	// 6. find "best" pcpu to pin vcpu
-	// 	int bestPCPU = -1;
-	// 	double minUsage = 1;
-	// 	double predictedUsage = interval; // any number that's larger than required usage (1)
+    if (pcpusBalanced) {
+        printf("pCPUs are balanced. No remapping required.\n");
+        free(pcpuUsage);
+        free(vcpuUsage);
+        free(domains);
+        return;
+    }
 
-	// 	unsigned char *currCpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
-	// 	result = virDomainGetVcpuPinInfo(domain, 1, currCpuMap, VIR_CPU_MAPLEN(npcpus), 0);
-	// 	if (result < 0) {
-	// 		fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-	// 		free(currCpuMap);
-	// 		continue;
-	// 	}
-
-	// 	for (int j = 0; j < npcpus; j++) {
-	// 		printf("PCPU %d... usage: %llu... min-usage:%llu\n", j, pcpuUsage[j], minUsage);
-
-	// 		if (!VIR_CPU_USED(currCpuMap, j)) {
-	// 			predictedUsage = ((pcpuLoads[j] + domainLoads[i]) - prevPcpuLoads[j]) / interval;
-	// 		}
-			
-	// 		if (pcpuUsage[j] < minUsage && predictedUsage < 1) {
-	// 			bestPCPU = j;
-	// 			minUsage = pcpuUsage[j];
-	// 		}
-	// 	}
-
-	// 	printf("Best PCPU: %d\n", bestPCPU);
-
-	// 	if (bestPCPU == -1)
-	// 	{
-	// 		fprintf(stderr, "No valid pCPU found\n");
-	// 		continue;
-	// 	}
-
-	// 	// 7. change pcpu assigned to vcpu
-	// 	unsigned char *bestPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
-	// 	memset(bestPCPUMap, 0, VIR_CPU_MAPLEN(npcpus));
-	// 	bestPCPUMap[bestPCPU / 8] |= (1 << (bestPCPU % 8));
-
-	// 	unsigned char *currentPCPUMap = calloc(VIR_CPU_MAPLEN(npcpus), sizeof(unsigned char));
-	// 	result = virDomainGetVcpuPinInfo(domain, 1, currentPCPUMap, VIR_CPU_MAPLEN(npcpus), 0);
-
-	// 	if (result < 0) {
-	// 		fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-	// 		free(bestPCPUMap);
-	// 		free(currentPCPUMap);
-	// 		continue;
-	// 	}
-
-	// 	// substract vcpu time from its soon-to-be prev pcpu
-	// 	for (int k = 0; k < npcpus; k++) {
-	// 		if (VIR_CPU_USED(currentPCPUMap, k)) {
-	// 			for (int j = 0; j < nparams; j++) {
-	// 				if (strcmp(params[j].field, "cpu_time") == 0) {
-	// 					pcpuLoads[k] -= params[j].value.ul;
-	// 					// long long usage = pcpuLoads[k] >= prevPcpuLoads[k] ? pcpuLoads[k] - prevPcpuLoads[k] : 0;
-	// 					// double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
-	// 					// pcpuPercentages[k] = usagePercentage;
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-
-	// 	result = virDomainPinVcpu(domain, 0, bestPCPUMap, VIR_CPU_MAPLEN(npcpus));
-	// 	if (result < 0) {
-	// 		fprintf(stderr, "Failed to pin vcpu to pcpu %d for domain %d\n", bestPCPU, i);
-	// 	} else {
-	// 		// add vcpu time to new pcpu
-    //         for (int j = 0; j < nparams; j++) {
-	// 			if (strcmp(params[j].field, "cpu_time") == 0) {
-	// 				pcpuLoads[bestPCPU] += params[j].value.ul;
-	// 				// long long usage = pcpuLoads[bestPCPU] >= prevPcpuLoads[bestPCPU] ? pcpuLoads[bestPCPU] - prevPcpuLoads[bestPCPU] : 0;
-	// 				// double usagePercentage = ((double)usage / (interval * 1000000000)) * 100;
-	// 				// pcpuPercentages[bestPCPU] = usagePercentage;
-	// 			}
-	// 		}
-	// 	}
-
-	// 	free(currentPCPUMap);
-	// 	free(bestPCPUMap);
-	// }
+	printf("pCPUs are not balanced. Remapping vCPUs...\n");
 
 	free(pcpuUsage);
 	free(domains);
