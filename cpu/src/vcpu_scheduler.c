@@ -95,13 +95,13 @@ void CPUScheduler(virConnectPtr conn, int interval)
         }
     }
 
-	long long *pcpuLoads = calloc(npcpus, sizeof(long long));
+	// long long *pcpuLoads = calloc(npcpus, sizeof(long long));
 
 	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
 		domain = domains[i];
 
-		nvcpus = virDomainGetCPUStats(Domain, NULL, 0, 0, 0, 0);
+		nvcpus = virDomainGetCPUStats(domain, NULL, 0, 0, 0, 0);
 
 		nparams = virDomainGetCPUStats(domain, NULL, 0, 0, 1, 0);
 		if (nparams < 0)
