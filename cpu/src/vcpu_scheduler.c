@@ -95,15 +95,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
         }
     }
 
-	if (totalCpuUsage == NULL) {
-        totalCpuUsage = calloc(1, sizeof(double));
-        if (totalCpuUsage == NULL) {
-            fprintf(stderr, "Failed to allocate memory for totalCpuUsage\n");
-            free(domains);
-            return;
-        }
-    }
-
 	double *pcpuUsage = calloc(npcpus, sizeof(double));
 	double *vcpuUsage = calloc(8, sizeof(double));
 
