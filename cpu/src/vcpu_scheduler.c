@@ -97,6 +97,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	double *pcpuUsage = calloc(npcpus, sizeof(double));
 	double *vcpuUsage = calloc(8, sizeof(double));
+	int **vcpuToPcpuMap = malloc(ndomains * sizeof(int *));
 
 	for (int i = 0; i < ndomains; i++) {
 		domain = domains[i];
@@ -128,6 +129,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
+		vcpuToPcpuMap[i] = malloc(nvcpus * sizeof(int));
+        memset(vcpuToPcpuMap[i], -1, nvcpus * sizeof(int));
+
 		for (int j = 0; j < nparams; j++)
 		{
 			if (strcmp(params[j].field, "vcpu_time") == 0) {
@@ -139,6 +143,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 						printf("aos_vm_%d on pcpu %d usage: %.2f\n", i + 1, k, vcpuUsage[i]);
 						pcpuUsage[k] += vcpuUsage[i];
 						printf("pcpu %d usage: %.2f\n", k, pcpuUsage[k]);
+						vcpuToPcpuMap[i][0] = k;
 						break;
 					}
 				}
@@ -170,11 +175,45 @@ void CPUScheduler(virConnectPtr conn, int interval)
         printf("pCPUs are balanced. No remapping required.\n");
         free(pcpuUsage);
         free(vcpuUsage);
+		for (int i = 0; i < ndomains; i++) {
+            free(vcpuToPcpuMap[i]);
+        }
+        free(vcpuToPcpuMap);
         free(domains);
         return;
     }
 
 	printf("pCPUs are not balanced. Remapping vCPUs...\n");
+
+	int *newPcpuUsage = calloc(npcpus, sizeof(int));
+    for (int i = 0; i < npcpus; i++) {
+        newPcpuUsage[i] = 0;
+    }
+
+	for (int i = 0; i < ndomains; i++) {
+        domain = domains[i];
+        for (int j = 0; j < 1; j++) {
+            int currentPcpu = vcpuToPcpuMap[i][j];
+            if (currentPcpu >= 0) {
+                newPcpuUsage[currentPcpu] += vcpuUsage[i];
+            }
+        }
+    }
+
+	for (int i = 0; i < ndomains; i++) {
+        domain = domains[i];
+        unsigned char *newCpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
+        for (int j = 0; j < npcpus; j++) {
+            if (newPcpuUsage[j] > targetUsagePerPcpu) {
+				newCpuMap[j / 8] |= (1 << (j % 8)); // this...
+            }
+        }
+        result = virDomainPinVcpu(domain, newCpuMap, VIR_CPU_MAPLEN(npcpus));
+        if (result < 0) {
+            fprintf(stderr, "Failed to pin vcpus for domain %d\n", i);
+        }
+        free(newCpuMap);
+    }
 
 	free(pcpuUsage);
 	free(domains);
