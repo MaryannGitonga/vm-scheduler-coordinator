@@ -136,11 +136,12 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				double vcpuTime = params[j].value.ul / pow(10, 9);
 				domainLoads[i] = vcpuTime;
 				for (int k = 0; k < npcpus; k++) {
-					printf("aos_vm_%d pinned on pcpu %d: %d\n", i+1, k, VIR_CPU_USED(cpuMap, k));
 					if (VIR_CPU_USED(cpuMap, k)) {
 						printf("aos_vm_%d on pcpu %d vcpu_time: %.2f seconds\n", i + 1, k, vcpuTime);
                         pcpuLoads[k] += vcpuTime;
                     }
+
+					printf("pcpu %d cpu_time: %.2f seconds\n", k, pcpuLoads[k]);
 				}
 			}
         }
