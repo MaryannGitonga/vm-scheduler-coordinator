@@ -163,7 +163,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	double targetUsagePerPcpu = totalCpuUsage[0] / npcpus;
-	printf("Total usage: %.2f", *);
+	printf("Total usage: %.2f", totalCpuUsage[0]);
 	printf("Target usage per pcpu: %.2f", targetUsagePerPcpu);
 
 	// for (int i = 0; i < ndomains; i++)
