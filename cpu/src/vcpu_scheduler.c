@@ -205,10 +205,10 @@ void CPUScheduler(virConnectPtr conn, int interval)
         unsigned char *newCpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
         for (int j = 0; j < npcpus; j++) {
             if (newPcpuUsage[j] > targetUsagePerPcpu) {
-				newCpuMap[j / 8] |= (1 << (j % 8)); // this...
+				newCpuMap[j / 8] |= (1 << (j % 8));
             }
         }
-        result = virDomainPinVcpu(domain, newCpuMap, VIR_CPU_MAPLEN(npcpus));
+        result = virDomainPinVcpu(domain, 0, newCpuMap, VIR_CPU_MAPLEN(npcpus));
         if (result < 0) {
             fprintf(stderr, "Failed to pin vcpus for domain %d\n", i);
         }
