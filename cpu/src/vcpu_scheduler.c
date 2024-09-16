@@ -10,7 +10,8 @@
 #define MAX(a,b) ((a)>(b)?a:b)
 
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
-double *prevPcpuLoads = NULL;
+double totalCpuUsage = 0.0;
+double *prevVcpuTimes = NULL; // store previous vcpu times
 
 void CPUScheduler(virConnectPtr conn,int interval);
 
@@ -58,6 +59,7 @@ int main(int argc, char *argv[])
 
 	// Closing the connection
 	free(prevPcpuLoads);
+	free(prevVcpuTimes);
 	virConnectClose(conn);
 	return 0;
 }
@@ -94,9 +96,18 @@ void CPUScheduler(virConnectPtr conn, int interval)
         }
     }
 
-	double *pcpuLoads = calloc(npcpus, sizeof(double));
+	if (prevVcpuTimes == NULL) {
+        prevVcpuTimes = calloc(8, sizeof(double));
+        if (prevVcpuTimes == NULL) {
+            fprintf(stderr, "Failed to allocate memory for prevVcpuTimes\n");
+            free(domains);
+            return;
+        }
+    }
+
 	double *pcpuUsage = calloc(npcpus, sizeof(double));
-	double *domainLoads = calloc(8, sizeof(double));
+	double *vcpuUsage = calloc(8, sizeof(double));
+	double totalUsage = 0.0;
 
 	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
@@ -130,38 +141,31 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		// 3. get pcpu stats
-		for (int j = 0; j < nparams; j++) {
-			if (strcmp(params[j].field, "vcpu_time") == 0) {
-				double vcpuTime = params[j].value.ul / pow(10, 9);
-				domainLoads[i] = vcpuTime;
-				for (int k = 0; k < npcpus; k++) {
-					if (VIR_CPU_USED(cpuMap, k)) {
-						printf("aos_vm_%d on pcpu %d vcpu_time: %.2f seconds\n", i + 1, k, vcpuTime);
-                        pcpuLoads[k] += vcpuTime;
-                    }
-
-					printf("pcpu %d cpu_time: %.2f seconds\n", k, pcpuLoads[k]);
+		// 3. get vcpu time/usage
+		if (strcmp(params[0].field, "vcpu_time") == 0) {
+			double vcpuTimeInSeconds = params[0].value.ul / pow(10, 9);
+			double usage = (vcpuTimeInSeconds - prevVcpuTimes[i])/interval;
+			vcpuUsage[i] = usage;
+			for (int k = 0; k < npcpus; k++) {
+				if (VIR_CPU_USED(cpuMap, k)) {
+					printf("aos_vm_%d on pcpu %d usage: %.2f\n", i + 1, k, vcpuUsage[i]);
+					pcpuUsage[k] += vcpuUsage[i];
 				}
+
+				printf("pcpu %d usage: %.2f\n", k, pcpuUsage[k]);
 			}
-        }
+
+			prevVcpuTimes[i] = vcpuTimeInSeconds;
+			totalCpuUsage += vcpuUsage[i];
+		}
 
 		free(params);
 		free(cpuMap);
 	}
 
-	// compute & save usage
-	// total pcpu time is eq to the interval.
-	for (int i = 0; i < npcpus; i++) {
-        if (prevPcpuLoads[i] != 0) {
-            double usage = (pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0);
-			printf("CPU %d.... Prev: %.2f seconds, Curr: %.2f seconds, Diff: %.2f\n", i, prevPcpuLoads[i], pcpuLoads[i], usage);
-            double usageNormalized = (usage / (interval));
-            printf("CPU %d usage: %.2f\n", i, usageNormalized);
-			pcpuUsage[i] += usageNormalized;
-        }
-        prevPcpuLoads[i] = pcpuLoads[i];
-    }
+	double targetUsagePerPcpu = totalCpuUsage / npcpus;
+	printf("Total usage: %.2f", totalCpuUsage);
+	printf("Target usage per pcpu: %.2f", targetUsagePerPcpu);
 
 	// for (int i = 0; i < ndomains; i++)
 	// {
