@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 	}
 
 	// Closing the connection
-	free(prevPcpuLoads);
+	free(totalCpuUsage);
 	free(prevVcpuTimes);
 	virConnectClose(conn);
 	return 0;
@@ -87,15 +87,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
         return;
     }
 
-	if (prevPcpuLoads == NULL) {
-        prevPcpuLoads = calloc(npcpus, sizeof(double));
-        if (prevPcpuLoads == NULL) {
-            fprintf(stderr, "Failed to allocate memory for prevPcpuLoads\n");
-            free(domains);
-            return;
-        }
-    }
-
 	if (prevVcpuTimes == NULL) {
         prevVcpuTimes = calloc(8, sizeof(double));
         if (prevVcpuTimes == NULL) {
@@ -107,7 +98,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	double *pcpuUsage = calloc(npcpus, sizeof(double));
 	double *vcpuUsage = calloc(8, sizeof(double));
-	double totalUsage = 0.0;
 
 	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
@@ -253,7 +243,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// 	free(bestPCPUMap);
 	// }
 
-	free(pcpuLoads);
+	free(pcpuUsage);
 	free(pcpuUsage);
 	free(domains);
 }
