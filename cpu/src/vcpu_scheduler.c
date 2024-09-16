@@ -10,8 +10,7 @@
 #define MAX(a,b) ((a)>(b)?a:b)
 
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
-long long *prevPcpuLoads = NULL;
-
+double *prevPcpuLoads = NULL;
 
 void CPUScheduler(virConnectPtr conn,int interval);
 
@@ -87,7 +86,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
     }
 
 	if (prevPcpuLoads == NULL) {
-        prevPcpuLoads = calloc(npcpus, sizeof(long long));
+        prevPcpuLoads = calloc(npcpus, sizeof(double));
         if (prevPcpuLoads == NULL) {
             fprintf(stderr, "Failed to allocate memory for prevPcpuLoads\n");
             free(domains);
@@ -95,7 +94,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
         }
     }
 
-	// long long *pcpuLoads = calloc(npcpus, sizeof(long long));
+	double *pcpuLoads = calloc(npcpus, sizeof(double));
+	double *pcpuUsage = calloc(npcpus, sizeof(double));
+	double *domainLoads = calloc(8, sizeof(double));
 
 	for (int i = 0; i < ndomains; i++) {
 		// 3. collect vcpu stats
@@ -131,59 +132,34 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		// 3. get pcpu stats
 		for (int j = 0; j < nparams; j++) {
-			printf("Domain %d - Param %d:\n", i, j);
-            printf("  Name: %s\n", params[j].field);
-            printf("  Type: %d\n", params[j].type);
-            switch (params[j].type) {
-                case VIR_TYPED_PARAM_INT:
-                    printf("  Value: %d\n", params[j].value.i);
-                    break;
-                case VIR_TYPED_PARAM_UINT:
-                    printf("  Value: %u\n", params[j].value.ui);
-                    break;
-                case VIR_TYPED_PARAM_LLONG:
-                    printf("  Value: %lld\n", params[j].value.l);
-                    break;
-                case VIR_TYPED_PARAM_ULLONG:
-                    printf("  Value: %llu\n", params[j].value.ul);
-                    break;
-                case VIR_TYPED_PARAM_STRING:
-                    printf("  Value: %s\n", params[j].value.s);
-                    break;
-                default:
-                    printf("  Value: (unknown type)\n");
-                    break;
-            }
-			// if (strcmp(params[j].field, "cpu_time") == 0) {
-			// 	unsigned long long vcpuTime = params[j].value.ul;
-			// 	for (int k = 0; k < npcpus; k++) {
-			// 		if (VIR_CPU_USED(cpuMap, k)) {
-			// 			printf("Domain %d cpu_time: %llu\n", i, vcpuTime);
-            //             pcpuLoads[k] += vcpuTime;
-			// 			break;
-            //         }
-			// 	}
-			// }
+			if (strcmp(params[j].field, "vcpu_time") == 0) {
+				double vcpuTime = params[j].value.ul / pow(10, 9);
+				domainLoads[i] = vcpuTime;
+				for (int k = 0; k < npcpus; k++) {
+					if (VIR_CPU_USED(cpuMap, k)) {
+						printf("aos_vm_%d on pcpu %d vcpu_time: %llu\n", i + 1, k, vcpuTime);
+                        pcpuLoads[k] += vcpuTime;
+                    }
+				}
+			}
         }
 
 		free(params);
 		free(cpuMap);
 	}
 
-	return;
-
-	// compute & save percentages
+	// compute & save usage
 	// total pcpu time is eq to the interval.
-	// memset(pcpuPercentages, 0.0, sizeof(double));
-	// for (int i = 0; i < npcpus; i++) {
-    //     if (prevPcpuLoads[i] != 0) {
-    //         long long usage = pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0;
-	// 		printf("CPU %d.... Prev: %llu, Curr: %llu, Usage: %llu\n", i, prevPcpuLoads[i], pcpuLoads[i], usage);
-    //         double usageNormalized = ((double)usage / (interval * 1000000000));
-    //         printf("CPU %d usage: %.2f%%\n", i, usageNormalized);
-    //     }
-    //     prevPcpuLoads[i] = pcpuLoads[i];
-    // }
+	for (int i = 0; i < npcpus; i++) {
+        if (prevPcpuLoads[i] != 0) {
+            double usage = (pcpuLoads[i] > prevPcpuLoads[i] ? (pcpuLoads[i] - prevPcpuLoads[i]) : 0);
+			printf("CPU %d.... Prev: %llu, Curr: %llu, Usage: %llu\n", i, prevPcpuLoads[i], pcpuLoads[i], usage);
+            double usageNormalized = (usage / (interval));
+            printf("CPU %d usage: %.2f%%\n", i, usageNormalized);
+			pcpuUsage[i] += usageNormalized;
+        }
+        prevPcpuLoads[i] = pcpuLoads[i];
+    }
 
 	// for (int i = 0; i < ndomains; i++)
 	// {
@@ -191,13 +167,27 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	// 	// 6. find "best" pcpu to pin vcpu
 	// 	int bestPCPU = -1;
-	// 	long long minLoad = interval * pow(10, 9);
+	// 	double minUsage = 1;
+	// 	double predictedUsage = interval; // any number that's larger than required usage (1)
+
+	// 	unsigned char *currCpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
+	// 	result = virDomainGetVcpuPinInfo(domain, 1, currCpuMap, VIR_CPU_MAPLEN(npcpus), 0);
+	// 	if (result < 0) {
+	// 		fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
+	// 		free(currCpuMap);
+	// 		continue;
+	// 	}
 
 	// 	for (int j = 0; j < npcpus; j++) {
-	// 		printf("PCPU %d... load: %llu...min-load:%llu\n", j, pcpuLoads[j], minLoad);
-	// 		if (pcpuLoads[j] < minLoad) {
+	// 		printf("PCPU %d... usage: %llu... min-usage:%llu\n", j, pcpuUsage[j], minUsage);
+
+	// 		if (!VIR_CPU_USED(currCpuMap, j)) {
+	// 			predictedUsage = ((pcpuLoads[j] + domainLoads[i]) - prevPcpuLoads[j]) / interval;
+	// 		}
+			
+	// 		if (pcpuUsage[j] < minUsage && predictedUsage < 1) {
 	// 			bestPCPU = j;
-	// 			minLoad = pcpuLoads[j];
+	// 			minUsage = pcpuUsage[j];
 	// 		}
 	// 	}
 
@@ -257,7 +247,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// 	free(bestPCPUMap);
 	// }
 
-	// free(pcpuLoads);
-	// // free(pcpuPercentages);
-	// free(domains);
+	free(pcpuLoads);
+	free(pcpuUsage);
+	free(domains);
 }
