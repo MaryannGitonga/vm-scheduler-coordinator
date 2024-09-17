@@ -15,4 +15,4 @@ if __name__ == '__main__':
     vms = manager.getRunningVMNames(VM_PREFIX)
     ips = TestLib.getIps(vms) #first vm only
     ipsAndVals = { ips[0] : [] }
-    TestLib.startTestCase("~/AOS_Project1/memory/test/testcases/1/run",ipsAndVals)
+    TestLib.startTestCase("~/memory/test/testcases/1/run {}",ipsAndVals)
