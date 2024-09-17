@@ -142,7 +142,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
                 unused = stats[j].val / 1024;
         }
 
-		domainStats[i].prev_unused = domainStats[i].unused;
+		domainStats[i].prev_unused = domainStats[i].unused ? domainStats[i].unused : 0.0;
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
@@ -155,7 +155,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < ndomains; i++)
 	{
 		// while the vm's unused memory is reducing & the next possible actual memory has not exceeded the limit
-		if ((domainStats[i].unused - domainStats[i].prev_unused > 1.0) && domainStats[i].actual < domainStats[i].maxLimit)
+		if (domainStats[i].prev_unused > 0.0 && (domainStats[i].unused - domainStats[i].prev_unused > 1.0) && domainStats[i].actual < domainStats[i].maxLimit)
 		{
 			int sacrificedVM = -1;
 			double releasedMemory = 0;
