@@ -116,10 +116,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
             }
         }
 
-        unsigned long long max = 0, soft = 0;
+        unsigned long long max = 0;
         for (int j = 0; j < nparams; j++) {
-            if (strcmp(params[j].field, "soft_limit") == 0)
-                soft = params[j].value.ul / 1024;
             if (strcmp(params[j].field, "max_limit") == 0)
                 max = params[j].value.ul / 1024;
         }
