@@ -142,7 +142,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
                 unused = stats[j].val / 1024;
         }
 
-		domainStats[i].prevUnused = domainStats[i].unused > 0.0 ? domainStats[i].unused : 0.0;
+		domainStats[i].prevUnused = domainStats[i].unused != NULL ? domainStats[i].unused : 0.0;
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
