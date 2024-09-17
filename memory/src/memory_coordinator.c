@@ -92,11 +92,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	if (domainStats == NULL) {
         domainStats = malloc(ndomains * sizeof(DomainMemoryStats));
-		domainStats->actual = 0.0;
-		domainStats->unused = 0.0;
-		domainStats->prevUnused = 0.0;
-		domainStats->maxLimit = 0.0;
-		domainStats->starving = 0;
+		memset(domainStats, 0, ndomains * sizeof(DomainMemoryStats)); 
         if (domainStats == NULL) {
             fprintf(stderr, "Failed to allocate memory for domain stats\n");
             free(domains);
