@@ -162,6 +162,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			printf("Re-allocating memory.....\n");
 			int sacrificedVM = -1;
 			double releasedMemory = 0;
+
 			for (int j = 0; j < ndomains; j++)
 			{
 				// get memory from other vms if vm has more than 100MB (unused) and more than 200MB (actual)
@@ -226,6 +227,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);	
 			}
 		}
+
+		break;
 	}
 
 	free(domains);
