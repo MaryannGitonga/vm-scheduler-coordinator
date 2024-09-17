@@ -98,6 +98,33 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	{
 		domain = domains[i];
 
+		// get memory parameters
+        virTypedParameterPtr params = NULL;
+        int nparams = 0;
+        if (virDomainGetMemoryParameters(domain, NULL, &nparams, 0) == 0 && nparams > 0) {
+            params = malloc(sizeof(*params) * nparams);
+            if (params == NULL) {
+                fprintf(stderr, "Memory allocation failed\n");
+                free(domains);
+                return;
+            }
+            memset(params, 0, sizeof(*params) * nparams);
+            if (virDomainGetMemoryParameters(domain, params, &nparams, 0) < 0) {
+                fprintf(stderr, "Failed to get memory parameters for domain %d\n", i);
+                free(params);
+                continue;
+            }
+        }
+
+        unsigned long long actual = 0, unused = 0, max = 0, soft = 0;
+        for (int j = 0; j < nparams; j++) {
+            if (strcmp(params[j].field, "soft_limit") == 0)
+                soft = params[j].value.ul;
+            if (strcmp(params[j].field, "max_limit") == 0)
+                max = params[j].value.ul;
+        }
+        free(params);
+
 		// get memory stats
         virDomainMemoryStatStruct stats[VIR_DOMAIN_MEMORY_STAT_NR];
         int nr_stats = virDomainMemoryStats(domain, stats, VIR_DOMAIN_MEMORY_STAT_NR, 0);
@@ -122,35 +149,33 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		printf("Memory (VM %d) Actual: [%llu MB], Unused: [%llu MB]\n", i, actualMB, unusedMB);
 
 
-		// Check if the host has enough free memory to release more from VMs
-        if (hostFreeMemoryMB > 200) {
-            // Release memory logic: gradual release
-            if (unusedMB > 100) {
+		if (unusedMB > 100) {
+            if (hostFreeMemoryMB > 200) {
                 unsigned long long releaseAmount = MIN(unusedMB - 100, 50);
-                if (releaseAmount > 0 && actualMB > 100) {
+                if (releaseAmount > 0 && actualMB > 100 && actualMB - releaseAmount >= soft) {
                     unsigned long long newMemorySize = actualMB - releaseAmount;
-                    if (virDomainSetMemory(domains[i], newMemorySize * 1024) < 0) {
+                    if (virDomainSetMemory(domain, newMemorySize * 1024) < 0) {
                         fprintf(stderr, "Failed to set memory for domain %d\n", i);
                     } else {
                         printf("Released %llu MB for VM %d\n", releaseAmount, i);
-                        // Update host free memory
                         hostFreeMemoryMB += releaseAmount;
                     }
                 }
+            } else {
+                printf("Not enough host memory to release more from VM %d\n", i);
             }
-        } else {
-            printf("Not enough host memory to release more from VM %d\n", i);
         }
 
-		// Allocate memory logic: Example logic
+        // Allocate memory logic
         if (unusedMB < 50) {
-            // Increase memory if unused memory is too low
-            unsigned long long additionalMemory = 50 - unusedMB;
-            unsigned long long newMemorySize = actualMB + additionalMemory;
-            if (virDomainSetMemory(domains[i], newMemorySize * 1024) < 0) {
-                fprintf(stderr, "Failed to increase memory for domain %d\n", i);
-            } else {
-                printf("Allocated %llu MB more for VM %d\n", additionalMemory, i);
+            unsigned long long additionalMemory = MIN(50 - unusedMB, max - actualMB);
+            if (additionalMemory > 0) {
+                unsigned long long newMemorySize = actualMB + additionalMemory;
+                if (virDomainSetMemory(domain, newMemorySize * 1024) < 0) {
+                    fprintf(stderr, "Failed to increase memory for domain %d\n", i);
+                } else {
+                    printf("Allocated %llu MB more for VM %d\n", additionalMemory, i);
+                }
             }
         }
 	}
