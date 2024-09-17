@@ -167,6 +167,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 						releasedMemory = MIN((domainStats[j].unused - 100), 50);
 						domainStats[j].unused = domainStats[j].unused - releasedMemory;
 						sacrificedVM = j;
+						printf("Domain %d sacrificed unused memory of %.2f MB\n", j, releasedMemory);
 						break;
 					} 
 					else if ((domainStats[j].actual - 50) > 200)
