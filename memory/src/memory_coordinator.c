@@ -243,16 +243,21 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		// once starving vm has attained the max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
 		if (domainStats[i].starving && domainStats[i].attainedMax == domainStats[i].maxLimit)
 		{
-			if (domainStats[i].actual > (domainStats[i].maxLimit / 4))
+			double lowestVMMemory = domainStats[i].maxLimit / 4;
+			if (domainStats[i].actual > lowestVMMemory)
 			{
-				double releasedMemory = (domainStats[i].actual - 100) > 512 ? MIN((domainStats[i].actual - 100), 100): (domainStats[i].actual - 512);
+				double releasedMemory = (domainStats[i].actual - 104) > lowestVMMemory ? MIN((domainStats[i].actual - 104), 104): (domainStats[i].actual - lowestVMMemory);
 				domainStats[i].actual = domainStats[i].actual - releasedMemory;
+
 				if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
 					fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
 				}
 				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);	
 			}
+		} else {
+			break;
 		}
+		
 	}
 
 	free(domains);
