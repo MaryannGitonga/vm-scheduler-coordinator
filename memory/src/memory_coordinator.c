@@ -153,7 +153,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < ndomains; i++)
 	{
 		// while the vm's unused memory is reducing & the next possible actual memory has not exceeded the limit
-		while ((domainStats[i].unused - domainStats[i].prev_unused > 1.0) && domainStats[i].actual < domainStats[i].maxLimit)
+		if ((domainStats[i].unused - domainStats[i].prev_unused > 1.0) && domainStats[i].actual < domainStats[i].maxLimit)
 		{
 			int sacrificedVM = -1;
 			double releasedMemory = 0;
@@ -206,7 +206,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		}
 
 		// once vm has reached max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
-		while (domainStats[i].actual > (domainStats[i].maxLimit/4)){
+		if (domainStats[i].actual > (domainStats[i].maxLimit/4))
+		{
 			double releasedMemory = (domainStats[i].actual - 100) > 512 ? MIN((domainStats[i].actual - 100), 100): (domainStats[i].actual - 512);
 			domainStats[i].actual = domainStats[i].actual - releasedMemory;
 			if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
@@ -214,6 +215,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			}
 			printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
 		}
+		
 
 		break;
 	}
