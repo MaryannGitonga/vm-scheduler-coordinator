@@ -157,9 +157,13 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	}
 
 	// get starving domains -> marked as starving from prev iter. OR has diminishing
-	if (starvingVMs == NULL)
+	if (nStarvingVMs == 0)
 	{	// if not initilized yet
-		starvingVMs = malloc(ndomains * sizeof(int));
+		if (starvingVMs == NULL)
+		{
+			starvingVMs = malloc(ndomains * sizeof(int));
+		}
+		
 		memset(starvingVMs, 0, ndomains * sizeof(int));
 		for (int i = 0; i < ndomains; i++)
 		{
