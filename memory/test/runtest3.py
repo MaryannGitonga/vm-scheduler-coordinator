@@ -22,7 +22,7 @@ if __name__ == '__main__':
         elif tmp == 1:
             ipsAndVals[ip]="B"
         tmp+=1
-    TestLib.startTestCase("~/testcases/3/run {}",ipsAndVals)
+    TestLib.startTestCase("~/AOS_Project1/memory/test/testcases/3/run {}",ipsAndVals)
 
         
 
