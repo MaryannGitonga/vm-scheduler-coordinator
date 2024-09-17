@@ -157,6 +157,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		// while the vm's unused memory is reducing & the next possible actual memory has not exceeded the limit
 		if (domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused > 1.0) && domainStats[i].actual < domainStats[i].maxLimit)
 		{
+
+			printf("Re-allocating memory.....\n");
 			int sacrificedVM = -1;
 			double releasedMemory = 0;
 			for (int j = 0; j < ndomains; j++)
