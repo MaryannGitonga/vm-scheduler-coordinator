@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 		sleep(interval);
 	}
 
-	cleanUp()
+	cleanUp();
 	// Close the connection
 	virConnectClose(conn);
 	return 0;
