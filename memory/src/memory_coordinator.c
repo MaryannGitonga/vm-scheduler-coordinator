@@ -171,7 +171,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		}
 	}
 
-	printf("Number of starving VMS....%d\n", starvingVMs);
+	printf("Number of starving VMS....%d\n", nStarvingVMs);
 
 	for (int i = 0; i < ndomains; i++)
 	{
