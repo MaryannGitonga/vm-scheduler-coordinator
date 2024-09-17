@@ -99,31 +99,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	{
 		domain = domains[i];
 
-		// get memory parameters
-        virTypedParameterPtr params = NULL;
-        int nparams = 0;
-        if (virDomainGetMemoryParameters(domain, NULL, &nparams, 0) == 0 && nparams > 0) {
-            params = malloc(sizeof(*params) * nparams);
-            if (params == NULL) {
-                fprintf(stderr, "Memory allocation failed\n");
-                free(domains);
-                return;
-            }
-            memset(params, 0, sizeof(*params) * nparams);
-            if (virDomainGetMemoryParameters(domain, params, &nparams, 0) < 0) {
-                fprintf(stderr, "Failed to get memory parameters for domain %d\n", i);
-                free(params);
-                continue;
-            }
-        }
-
-        unsigned long long hardLimit = 0;
-        for (int j = 0; j < nparams; j++) {
-            if (strcmp(params[j].field, "hard_limit") == 0){
-                hardLimit = params[j].value.ul / 1024;
-			}
-        }
-        free(params);
+        unsigned long long maxLimit = 0;
+        maxLimit = virDomainGetMaxMemory(domain) / 1024;
 
 		// get memory stats
         virDomainMemoryStatStruct stats[VIR_DOMAIN_MEMORY_STAT_NR];
@@ -146,7 +123,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
         unsigned long long actualMB = actual / 1024;
         unsigned long long unusedMB = unused / 1024;
 
-		printf("Memory (VM %d) Actual: [%llu MB], Unused: [%llu MB], HardLimit: [%llu MB]\n", i, actualMB, unusedMB, hardLimit);
+		printf("Memory (VM %d) Actual: [%llu MB], Unused: [%llu MB], HardLimit: [%llu MB]\n", i, actualMB, unusedMB, maxLimit);
 	}
 
 	free(domains);
