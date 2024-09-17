@@ -232,12 +232,12 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				}
 			}
 
-			if (vmsStarving == 1)
+			if (vmsStarving != 1)
 			{
-				break;
-			} else {
 				continue;
 			}
+
+			break;
 		}
 
 		// once starving vm has attained the max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
@@ -255,12 +255,12 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);	
 			}
 		} else {
-			if (vmsStarving == 1)
+			if (vmsStarving != 1)
 			{
-				break;
-			} else {
 				continue;
 			}
+
+			break;
 		}
 		
 	}
