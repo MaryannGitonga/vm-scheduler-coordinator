@@ -92,7 +92,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
         return;
     }
 
-	unsigned long long hostFreeMemoryMB = hostFreeMemory / 1024;
+	unsigned long long hostFreeMemoryMB = hostFreeMemory / (1024 * 1024);
 	printf("Host free memory: %llu MB\n", hostFreeMemoryMB);
 
 	for (int i = 0; i < ndomains; i++)
