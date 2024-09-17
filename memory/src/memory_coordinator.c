@@ -15,7 +15,7 @@ typedef struct {
     double unused;
 	double prev_unused;
     double maxLimit;
-	int starving = 0;
+	int starving;
 } DomainMemoryStats;
 
 DomainMemoryStats *domainStats = NULL;
@@ -146,6 +146,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
+		domainStats[i].starving = 0;
 
 		printf("Memory (VM %d) Actual: [%.2f MB], Unused: [%.2f MB], MaxLimit: [%.2f MB]\n", i, actual, unused, maxLimit);
 		
