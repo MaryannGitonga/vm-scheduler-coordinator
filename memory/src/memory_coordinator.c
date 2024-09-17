@@ -152,27 +152,21 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	for (int i = 0; i < ndomains; i++)
 	{
-		// while the the next possible actual memory has not exceeded the limit
-		while (domainStats[i].unused < 100 && (domainStats[i].actual + 50) < domainStats[i].maxLimit)
+		// while the vm's unused memory is reducing & the next possible actual memory has not exceeded the limit
+		while ((domainStats[i].unused - domainStats[i].prev_unused > 1.0) && domainStats[i].actual < domainStats[i].maxLimit)
 		{
 			int sacrificedVM = -1;
 			double releasedMemory = 0;
 			for (int j = 0; j < ndomains; j++)
 			{
-				// get memomory from other vms if vm has more than 200MB (actual) or more than 100MB (unused)
+				// get memomory from other vms if vm has more than 100MB (unused) and more than 200MB (actual)
 				if (j != i)
-				{
-					if ((domainStats[j].unused - 50) > 100)
+				{ 
+					if (domainStats[j].unused > 100 && domainStats[j].actual > 200)
 					{
-						releasedMemory = MIN((domainStats[j].unused - 100), 50);
-						domainStats[j].unused = domainStats[j].unused - releasedMemory;
-						sacrificedVM = j;
-						printf("Domain %d sacrificed unused memory of %.2f MB\n", j, releasedMemory);
-						break;
-					} 
-					else if ((domainStats[j].actual - 50) > 200)
-					{
-						releasedMemory = MIN((domainStats[j].actual - 200), 50);
+						releasedMemory = MIN((domainStats[j].actual - 200), 100);
+						releasedMemory = MIN(releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
+
 						domainStats[j].actual = domainStats[j].actual - releasedMemory;
 						if (virDomainSetMemory(domains[j], domainStats[j].actual * 1024) != 0)
 						{
@@ -195,10 +189,13 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				printf("Starving domain %d now has memory of %.2f MB from a sacrificed domain\n", i, domainStats[i].actual);
 			} else { 
 				// if no vm was sacrificed, get memory from host
-				if ((hostFreeMemory - 50) > 200)
+				if ((hostFreeMemory) > 200)
 				{
-					double releasedMemory = MIN((hostFreeMemory - 200), 50);
+					releasedMemory = MIN((hostFreeMemory - 200), 100);
+					releasedMemory = MIN(releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
+
 					hostFreeMemory = hostFreeMemory - releasedMemory;
+
 					domainStats[i].actual = domainStats[i].actual + releasedMemory;
 					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024)){
 						fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
@@ -210,7 +207,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 		// once vm has reached max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
 		while (domainStats[i].actual > (domainStats[i].maxLimit/4)){
-			double releasedMemory = (domainStats[i].actual - 50) > 512 ? MIN((domainStats[i].actual - 100), 50): (domainStats[i].actual - 512);
+			double releasedMemory = (domainStats[i].actual - 100) > 512 ? MIN((domainStats[i].actual - 100), 100): (domainStats[i].actual - 512);
 			domainStats[i].actual = domainStats[i].actual - releasedMemory;
 			if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024)){
 				fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
