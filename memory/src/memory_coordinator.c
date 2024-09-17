@@ -155,7 +155,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	for (int i = 0; i < ndomains; i++)
 	{
-		int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused > 1.0));
+		int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused > 1.0)) ? 1 : 0;
 		// while the vm's unused memory is reducing & the next possible actual memory has not exceeded the limit
 		if ((domainStats[i].starving || unusedMemoryReduced) && domainStats[i].actual < domainStats[i].maxLimit)
 		{
