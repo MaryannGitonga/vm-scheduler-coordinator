@@ -92,6 +92,11 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	if (domainStats == NULL) {
         domainStats = malloc(ndomains * sizeof(DomainMemoryStats));
+		domainStats->actual = 0.0;
+		domainStats->unused = 0.0;
+		domainStats->prevUnused = 0.0;
+		domainStats->maxLimit = 0.0;
+		domainStats->starving = 0;
         if (domainStats == NULL) {
             fprintf(stderr, "Failed to allocate memory for domain stats\n");
             free(domains);
@@ -142,11 +147,10 @@ void MemoryScheduler(virConnectPtr conn, int interval)
                 unused = stats[j].val / 1024;
         }
 
-		domainStats[i].prevUnused = domainStats[i].unused != NULL ? domainStats[i].unused : 0.0;
+		domainStats[i].prevUnused = domainStats[i].unused;
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
-		domainStats[i].starving = 0;
 
 		printf("Memory (VM %d) Actual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit);
 		
