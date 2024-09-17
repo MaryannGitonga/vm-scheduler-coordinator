@@ -114,7 +114,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
     }
 
 	double hostFreeMemoryMB = hostFreeMemory / (1024 * 1024);
-	printf("Host free memory: %ld MB\n", hostFreeMemoryMB);
+	printf("Host free memory: %.2f MB\n", hostFreeMemoryMB);
 
 	for (int i = 0; i < ndomains; i++)
 	{
@@ -144,7 +144,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
 
-		printf("Memory (VM %d) Actual: [%ld MB], Unused: [%ld MB], MaxLimit: [%ld MB]\n", i, actual, unused, maxLimit);
+		printf("Memory (VM %d) Actual: [%.2f MB], Unused: [%.2f MB], MaxLimit: [%.2f MB]\n", i, actual, unused, maxLimit);
 		
 	}
 
@@ -172,10 +172,10 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 						domainStats[j].actual = domainStats[j].actual - releasedMemory;
 						if (virDomainSetMemory(domains[j], domainStats[j].actual * 1024) != 0)
 						{
-							fprintf(stderr, "Failed to set actual memory of %ld MB to sacrificed domain %d\n", domainStats[j].actual, j);
+							fprintf(stderr, "Failed to set actual memory of %.2f MB to sacrificed domain %d\n", domainStats[j].actual, j);
 						}
 						
-						printf("Domain %d sacrificed actual memory of %ld MB\n", j, domainStats[j].actual);
+						printf("Domain %d sacrificed actual memory of %.2f MB\n", j, domainStats[j].actual);
 						sacrificedVM = j;
 						continue;
 					}
@@ -185,9 +185,9 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				{
 					domainStats[i].actual = domainStats[i].actual + releasedMemory;
 					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024)){
-						fprintf(stderr, "Failed to set actual memory of %ld MB to the starving domain %d\n", domainStats[i].actual, i);
+						fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
 					}
-					printf("Starving domain %d now has memory of %ld MB from a sacrificed domain\n", j, domainStats[j].actual);
+					printf("Starving domain %d now has memory of %.2f MB from a sacrificed domain\n", j, domainStats[j].actual);
 				}
 				
 				
@@ -202,9 +202,9 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					hostFreeMemory = hostFreeMemory - releasedMemory;
 					domainStats[i].actual = domainStats[i].actual + releasedMemory;
 					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024)){
-						fprintf(stderr, "Failed to set actual memory of %ld MB to the starving domain %d\n", domainStats[i].actual, i);
+						fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
 					}
-					printf("Starving domain %d now has memory of %ld MB from the host\n", i, domainStats[i].actual);
+					printf("Starving domain %d now has memory of %.2f MB from the host\n", i, domainStats[i].actual);
 				}
 				
 			}
@@ -215,9 +215,9 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			double releasedMemory = MIN((domainStats[i].actual - 100), 100);
 			domainStats[i].actual = domainStats[i].actual - releasedMemory;
 			if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024)){
-				fprintf(stderr, "Failed to set actual memory of %ld MB to the bloated domain %d\n", domainStats[i].actual, i);
+				fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
 			}
-			printf("Bloated domain %d now has memory of %ld MB after releasing memory.\n", i, domainStats[i].actual);
+			printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
 		}
 	}
 
