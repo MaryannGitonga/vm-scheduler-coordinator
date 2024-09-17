@@ -67,7 +67,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	printf("Scheduler started...\n");
 	virDomainPtr *domains, domain;
 	int ndomains;
-	unsigned long long hostFreeMemory, hostTotalMemory;
+	unsigned long long hostFreeMemory;
 
 	// get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
