@@ -15,6 +15,7 @@ typedef struct {
     double unused;
 	double prev_unused;
     double maxLimit;
+	int starving = 0;
 } DomainMemoryStats;
 
 DomainMemoryStats *domainStats = NULL;
@@ -186,6 +187,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
 					fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
 				}
+				domainStats[i].starving = 1;
 				printf("Starving domain %d now has memory of %.2f MB from a sacrificed domain\n", i, domainStats[i].actual);
 			} else { 
 				// if no vm was sacrificed, get memory from host
@@ -200,13 +202,14 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
 						fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
 					}
+					domainStats[i].starving = 1;
 					printf("Starving domain %d now has memory of %.2f MB from the host\n", i, domainStats[i].actual);
 				}
 			}
 		}
 
-		// once vm has reached max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
-		if (domainStats[i].actual > (domainStats[i].maxLimit/4))
+		// once starving vm has reached max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
+		if (domainStats[i].starving = 1 && domainStats[i].actual > (domainStats[i].maxLimit/4))
 		{
 			double releasedMemory = (domainStats[i].actual - 100) > 512 ? MIN((domainStats[i].actual - 100), 100): (domainStats[i].actual - 512);
 			domainStats[i].actual = domainStats[i].actual - releasedMemory;
