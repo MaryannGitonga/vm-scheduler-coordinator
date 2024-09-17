@@ -15,4 +15,4 @@ if __name__ == '__main__':
     vms = manager.getRunningVMNames(VM_PREFIX)
     ips = TestLib.getIps(vms)
     ipsAndVals = { ip : [] for ip in ips }
-    TestLib.startTestCase("~/memory/test/testcases/2/run {}",ipsAndVals)
+    TestLib.startTestCase("~/testcases/2/run",ipsAndVals)
