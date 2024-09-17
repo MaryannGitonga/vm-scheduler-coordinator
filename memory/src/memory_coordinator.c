@@ -66,8 +66,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 {
 	printf("Scheduler started...\n");
 	virDomainPtr *domains, domain;
-	int ndomains, result, nparams = 0, npcpus;
-	virTypedParameterPtr params;
+	int ndomains, result;
 
 	// 2. get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -76,13 +75,6 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		fprintf(stderr, "Failed to get active running VMs\n");
 		return;
 	}
-
-	npcpus = virNodeGetCPUMap(conn, NULL, NULL, 0);
-    if (npcpus < 0) {
-        fprintf(stderr, "Failed to get number of pcpus\n");
-        free(domains);
-        return;
-    }
 
 	for (int i = 0; i < ndomains; i++)
 	{
@@ -93,64 +85,61 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			fprintf(stderr, "Failed to set memory stats period.\n");
 		}
 
-		// get memory params
-		// virDomainGetMemoryParameters
-		result = virDomainGetMemoryParameters(domain, NULL, &nparams, 0);
-		if (result != 0)
-		{
-			fprintf(stderr, "Failed to get nparams.\n");
-		}
-
-		params = malloc(sizeof(*params) * nparams);
-        if (params == NULL) {
-            fprintf(stderr, "Failed to allocate memory for params.\n");
+		// get memory stats
+        virDomainMemoryStatStruct stats[VIR_DOMAIN_MEMORY_STAT_NR];
+        int nr_stats = virDomainMemoryStats(domain, stats, VIR_DOMAIN_MEMORY_STAT_NR, 0);
+        if (nr_stats < 0) {
+            fprintf(stderr, "Failed to get memory stats for domain ID %d.\n", virDomainGetID(domain));
             continue;
         }
-        memset(params, 0, sizeof(*params) * nparams);
 
-		result = virDomainGetMemoryParameters(domain, params, &nparams, 0);
-		if(result != 0){
-			fprintf(stderr, "Failed to get memory params.\n");
-		}
-
-		for (int j = 0; j < nparams; j++)
-		{
-			printf("  %s: ", params[j].field);
-            switch (params[j].type)
-            {
-                case VIR_TYPED_PARAM_INT:
-                    printf("%d\n", params[j].value.i);
+		printf("Memory Statistics for Domain ID %d:\n", virDomainGetID(domain));
+        for (int j = 0; j < nr_stats; j++) {
+            switch (stats[j].tag) {
+                case VIR_DOMAIN_MEMORY_STAT_SWAP_IN:
+                    printf("  SWAP_IN: %llu KB\n", stats[j].val);
                     break;
-                case VIR_TYPED_PARAM_UINT:
-                    printf("%u\n", params[j].value.ui);
+                case VIR_DOMAIN_MEMORY_STAT_SWAP_OUT:
+                    printf("  SWAP_OUT: %llu KB\n", stats[j].val);
                     break;
-                case VIR_TYPED_PARAM_LLONG:
-                    printf("%lld\n", params[j].value.l);
+                case VIR_DOMAIN_MEMORY_STAT_MAJOR_FAULT:
+                    printf("  MAJOR_FAULT: %llu\n", stats[j].val);
                     break;
-                case VIR_TYPED_PARAM_ULLONG:
-                    printf("%llu\n", params[j].value.ul);
+                case VIR_DOMAIN_MEMORY_STAT_MINOR_FAULT:
+                    printf("  MINOR_FAULT: %llu\n", stats[j].val);
                     break;
-                case VIR_TYPED_PARAM_DOUBLE:
-                    printf("%f\n", params[j].value.d);
+                case VIR_DOMAIN_MEMORY_STAT_UNUSED:
+                    printf("  UNUSED: %llu KB\n", stats[j].val);
                     break;
-                case VIR_TYPED_PARAM_BOOLEAN:
-                    printf("%s\n", params[j].value.b ? "true" : "false");
+                case VIR_DOMAIN_MEMORY_STAT_AVAILABLE:
+                    printf("  AVAILABLE: %llu KB\n", stats[j].val);
                     break;
-                case VIR_TYPED_PARAM_STRING:
-                    printf("%s\n", params[j].value.s);
+                case VIR_DOMAIN_MEMORY_STAT_USABLE:
+                    printf("  USABLE: %llu KB\n", stats[j].val);
+                    break;
+                case VIR_DOMAIN_MEMORY_STAT_ACTUAL_BALLOON:
+                    printf("  ACTUAL_BALLOON: %llu KB\n", stats[j].val);
+                    break;
+                case VIR_DOMAIN_MEMORY_STAT_LAST_UPDATE:
+                    printf("  LAST_UPDATE: %llu\n", stats[j].val);
+                    break;
+                case VIR_DOMAIN_MEMORY_STAT_DISK_CACHES:
+                    printf("  DISK_CACHES: %llu KB\n", stats[j].val);
+                    break;
+                case VIR_DOMAIN_MEMORY_STAT_HUGETLB_PGALLOC:
+                    printf("  HUGETLB_PGALLOC: %llu\n", stats[j].val);
+                    break;
+                case VIR_DOMAIN_MEMORY_STAT_HUGETLB_PGFAIL:
+                    printf("  HUGETLB_PGFAIL: %llu\n", stats[j].val);
                     break;
                 default:
-                    printf("Unknown type\n");
+                    printf("  UNKNOWN STAT (%d): %llu\n", stats[j].tag, stats[j].val);
                     break;
             }
-		}
-		
-		
-
-		// virDomainMemoryStats
-
-		// virDomainSetMemory
+        }
 		
 	}
+
+	free(domains);
 	
 }
