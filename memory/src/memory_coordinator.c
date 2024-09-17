@@ -117,10 +117,11 @@ void MemoryScheduler(virConnectPtr conn, int interval)
             }
         }
 
-        unsigned long long maxLimit = 0;
+        unsigned long long hardLimit = 0;
         for (int j = 0; j < nparams; j++) {
-            if (strcmp(params[j].field, "max_limit") == 0)
-                maxLimit = params[j].value.ul / 1024;
+            if (strcmp(params[j].field, "hard_limit") == 0){
+                hardLimit = params[j].value.ul / 1024;
+			}
         }
         free(params);
 
@@ -145,7 +146,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
         unsigned long long actualMB = actual / 1024;
         unsigned long long unusedMB = unused / 1024;
 
-		printf("Memory (VM %d) Actual: [%llu MB], Unused: [%llu MB], MaxLimit: [%llu MB]\n", i, actualMB, unusedMB, maxLimit);
+		printf("Memory (VM %d) Actual: [%llu MB], Unused: [%llu MB], HardLimit: [%llu MB]\n", i, actualMB, unusedMB, hardLimit);
 	}
 
 	free(domains);
