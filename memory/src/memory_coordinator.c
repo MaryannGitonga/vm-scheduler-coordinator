@@ -13,7 +13,7 @@ int is_exit = 0; // DO NOT MODIFY THE VARIABLE
 typedef struct {
     double actual;
     double unused;
-	double prev_unused;
+	double prevUnused;
     double maxLimit;
 	int starving;
 } DomainMemoryStats;
@@ -142,20 +142,20 @@ void MemoryScheduler(virConnectPtr conn, int interval)
                 unused = stats[j].val / 1024;
         }
 
-		domainStats[i].prev_unused = domainStats[i].unused ? domainStats[i].unused : 0.0;
+		domainStats[i].prevUnused = domainStats[i].unused > 0.0 ? domainStats[i].unused : 0.0;
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
 		domainStats[i].starving = 0;
 
-		printf("Memory (VM %d) Actual: [%.2f MB], Unused: [%.2f MB], MaxLimit: [%.2f MB]\n", i, actual, unused, maxLimit);
+		printf("Memory (VM %d) Actual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit);
 		
 	}
 
 	for (int i = 0; i < ndomains; i++)
 	{
 		// while the vm's unused memory is reducing & the next possible actual memory has not exceeded the limit
-		if (domainStats[i].prev_unused > 0.0 && (domainStats[i].unused - domainStats[i].prev_unused > 1.0) && domainStats[i].actual < domainStats[i].maxLimit)
+		if (domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused > 1.0) && domainStats[i].actual < domainStats[i].maxLimit)
 		{
 			int sacrificedVM = -1;
 			double releasedMemory = 0;
