@@ -210,7 +210,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		}
 
 		// once starving vm has reached max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
-		if (domainStats[i].starving = 1 && domainStats[i].actual > (domainStats[i].maxLimit/4))
+		if (domainStats[i].starving && domainStats[i].actual > (domainStats[i].maxLimit/4))
 		{
 			double releasedMemory = (domainStats[i].actual - 100) > 512 ? MIN((domainStats[i].actual - 100), 100): (domainStats[i].actual - 512);
 			domainStats[i].actual = domainStats[i].actual - releasedMemory;
