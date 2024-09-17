@@ -151,7 +151,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < ndomains; i++)
 	{
 		// check if unused memory is less than 100MB for the vm -> vm is consuming memory AND actual memory has not exceeded the limit
-		while (domainStats[i].unused < 100 domainStats[i].actual < domainStats[i].maxLimit)
+		while (domainStats[i].unused < 100 && domainStats[i].actual < domainStats[i].maxLimit)
 		{
 			int sacrificedVM = -1;
 			double releasedMemory = 0;
@@ -214,6 +214,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			}
 			printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
 		}
+
+		break;
 	}
 
 	free(domains);
