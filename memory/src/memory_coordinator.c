@@ -66,7 +66,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 {
 	printf("Scheduler started...\n");
 	virDomainPtr *domains, domain;
-	int ndomains, result, nparams, npcpus;
+	int ndomains, result, nparams = 0, npcpus;
 	virTypedParameterPtr params;
 
 	// 2. get all active running VMs
