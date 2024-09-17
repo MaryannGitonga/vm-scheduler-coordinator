@@ -66,7 +66,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 {
 	printf("Scheduler started...\n");
 	virDomainPtr *domains, domain;
-	int ndomains, result, nvcpus, nparams, npcpus;
+	int ndomains, result, nparams, npcpus;
 	virTypedParameterPtr params;
 
 	// 2. get all active running VMs
@@ -87,7 +87,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < ndomains; i++)
 	{
 		domain = domains[i];
-		result = virDomainSetMemoryStatsPeriod(domain, interval);
+		result = virDomainSetMemoryStatsPeriod(domain, interval, 0);
 		if (result != 0)
 		{
 			fprintf(stderr, "Failed to set memory stats period.\n");
@@ -100,6 +100,13 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		{
 			fprintf(stderr, "Failed to get nparams.\n");
 		}
+
+		params = malloc(sizeof(*params) * nparams);
+        if (params == NULL) {
+            fprintf(stderr, "Failed to allocate memory for params.\n");
+            continue;
+        }
+        memset(params, 0, sizeof(*params) * nparams);
 
 		result = virDomainGetMemoryParameters(domain, params, &nparams, 0);
 		if(result != 0){
