@@ -188,7 +188,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					{ 
 						if (domainStats[j].unused >= 100 && domainStats[j].actual > 200)
 						{
-							releasedMemory = MIN((domainStats[j].actual - 200), 100);
+							releasedMemory = MIN((domainStats[j].actual - 200), 104);
 							releasedMemory = MIN(releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
 
 							domainStats[j].actual = domainStats[j].actual - releasedMemory;
@@ -218,7 +218,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				// if no vm was sacrificed, get memory from host if host has more than 200MB (unused)
 				if ((hostFreeMemory) >= 200)
 				{
-					releasedMemory = MIN((hostFreeMemory - 200), 100);
+					releasedMemory = MIN((hostFreeMemory - 200), 104);
 					releasedMemory = MIN(releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
 
 					hostFreeMemory = hostFreeMemory - releasedMemory;
