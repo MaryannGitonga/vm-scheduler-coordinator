@@ -116,7 +116,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
             }
         }
 
-        unsigned long long actual = 0, unused = 0, max = 0, soft = 0;
+        unsigned long long max = 0, soft = 0;
         for (int j = 0; j < nparams; j++) {
             if (strcmp(params[j].field, "soft_limit") == 0)
                 soft = params[j].value.ul;
