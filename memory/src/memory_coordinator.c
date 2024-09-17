@@ -66,78 +66,85 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 {
 	printf("Scheduler started...\n");
 	virDomainPtr *domains, domain;
-	int ndomains, result;
+	int ndomains;
+	unsigned long long hostFreeMemory, hostTotalMemory;
 
-	// 2. get all active running VMs
+	// get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
-
 	if(ndomains < 0) {
 		fprintf(stderr, "Failed to get active running VMs\n");
 		return;
 	}
 
+	// set memory stats period for all domains
+    for (int i = 0; i < ndomains; i++) {
+        if (virDomainSetMemoryStatsPeriod(domains[i], interval, 0) < 0) {
+            fprintf(stderr, "Failed to set memory stats period for VM %d\n", i);
+            continue;
+        }
+    }
+
+	// get host memory info
+	hostFreeMemory = virNodeGetFreeMemory(conn);
+	if (hostFreeMemory == 0) {
+        fprintf(stderr, "Failed to get host free memory\n");
+        free(domains);
+        return;
+    }
+
 	for (int i = 0; i < ndomains; i++)
 	{
 		domain = domains[i];
-		result = virDomainSetMemoryStatsPeriod(domain, interval, 0);
-		if (result != 0)
-		{
-			fprintf(stderr, "Failed to set memory stats period.\n");
-		}
 
 		// get memory stats
         virDomainMemoryStatStruct stats[VIR_DOMAIN_MEMORY_STAT_NR];
         int nr_stats = virDomainMemoryStats(domain, stats, VIR_DOMAIN_MEMORY_STAT_NR, 0);
+
         if (nr_stats < 0) {
-            fprintf(stderr, "Failed to get memory stats for domain ID %d.\n", i);
+            fprintf(stderr, "Failed to get memory stats for domain %d\n", i);
             continue;
         }
 
-		printf("Memory Statistics for Domain ID %d:\n", i);
+		unsigned long long actual = 0, unused = 0;
         for (int j = 0; j < nr_stats; j++) {
-            switch (stats[j].tag) {
-                case VIR_DOMAIN_MEMORY_STAT_SWAP_IN:
-                    printf("  SWAP_IN: %llu KB\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_SWAP_OUT:
-                    printf("  SWAP_OUT: %llu KB\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_MAJOR_FAULT:
-                    printf("  MAJOR_FAULT: %llu\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_MINOR_FAULT:
-                    printf("  MINOR_FAULT: %llu\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_UNUSED:
-                    printf("  UNUSED: %llu KB\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_AVAILABLE:
-                    printf("  AVAILABLE: %llu KB\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_USABLE:
-                    printf("  USABLE: %llu KB\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_ACTUAL_BALLOON:
-                    printf("  ACTUAL_BALLOON: %llu KB\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_LAST_UPDATE:
-                    printf("  LAST_UPDATE: %llu\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_DISK_CACHES:
-                    printf("  DISK_CACHES: %llu KB\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_HUGETLB_PGALLOC:
-                    printf("  HUGETLB_PGALLOC: %llu\n", stats[j].val);
-                    break;
-                case VIR_DOMAIN_MEMORY_STAT_HUGETLB_PGFAIL:
-                    printf("  HUGETLB_PGFAIL: %llu\n", stats[j].val);
-                    break;
-                default:
-                    printf("  UNKNOWN STAT (%d): %llu\n", stats[j].tag, stats[j].val);
-                    break;
+            if (stats[j].tag == VIR_DOMAIN_MEMORY_STAT_ACTUAL_BALLOON)
+                actual = stats[j].val;
+            if (stats[j].tag == VIR_DOMAIN_MEMORY_STAT_UNUSED)
+                unused = stats[j].val;
+        }
+
+		// convert to MB
+        unsigned long long actualMB = actual / 1024;
+        unsigned long long unusedMB = unused / 1024;
+
+		printf("Memory (VM %d) Actual: [%llu MB], Unused: [%llu MB]\n", i, actualMB, unusedMB);
+
+
+		// Release memory logic: gradual release
+        if (unusedMB > 100) {
+            // Example logic: release up to 50 MB at a time
+            unsigned long long releaseAmount = MIN(unusedMB - 100, 50);
+            if (releaseAmount > 0 && actualMB > 100) {
+                unsigned long long newMemorySize = actualMB - releaseAmount;
+                if (virDomainSetMemory(domains[i], newMemorySize * 1024) < 0) {
+                    fprintf(stderr, "Failed to set memory for domain %d\n", i);
+                } else {
+                    printf("Released %llu MB for VM %d\n", releaseAmount, i);
+                }
             }
         }
-		
+
+		// Allocate memory logic: Example logic
+        if (unusedMB < 50) {
+            // Increase memory if unused memory is too low
+            unsigned long long additionalMemory = 50 - unusedMB;
+            unsigned long long newMemorySize = actualMB + additionalMemory;
+            if (virDomainSetMemory(domains[i], newMemorySize * 1024) < 0) {
+                fprintf(stderr, "Failed to increase memory for domain %d\n", i);
+            } else {
+                printf("Allocated %llu MB more for VM %d\n", additionalMemory, i);
+            }
+        }
 	}
 
 	free(domains);
