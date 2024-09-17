@@ -89,11 +89,11 @@ void MemoryScheduler(virConnectPtr conn, int interval)
         virDomainMemoryStatStruct stats[VIR_DOMAIN_MEMORY_STAT_NR];
         int nr_stats = virDomainMemoryStats(domain, stats, VIR_DOMAIN_MEMORY_STAT_NR, 0);
         if (nr_stats < 0) {
-            fprintf(stderr, "Failed to get memory stats for domain ID %d.\n", virDomainGetID(domain));
+            fprintf(stderr, "Failed to get memory stats for domain ID %d.\n", i);
             continue;
         }
 
-		printf("Memory Statistics for Domain ID %d:\n", virDomainGetID(domain));
+		printf("Memory Statistics for Domain ID %d:\n", i);
         for (int j = 0; j < nr_stats; j++) {
             switch (stats[j].tag) {
                 case VIR_DOMAIN_MEMORY_STAT_SWAP_IN:
