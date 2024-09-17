@@ -20,10 +20,12 @@ typedef struct {
 } DomainMemoryStats;
 
 DomainMemoryStats *domainStats = NULL;
-int vmsStarving = 0;
+int *starvingVMs = NULL;
+int nStarvingVMs = 0;
 
 void cleanUp() {
 	free(domainStats);
+	free(starvingVMs);
 }
 
 void MemoryScheduler(virConnectPtr conn,int interval);
@@ -154,19 +156,22 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		
 	}
 
-	// get number of starving domains -> marked as starving from prev iter. OR has diminishing
-	if (vmsStarving == 0)
+	// get starving domains -> marked as starving from prev iter. OR has diminishing
+	if (starvingVMs == NULL)
 	{	// if not initilized yet
+		starvingVMs = malloc(ndomains * sizeof(int));
+		memset(starvingVMs, 0, ndomains * sizeof(int));
 		for (int i = 0; i < ndomains; i++)
 		{
 			int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 1.0));
 			if (unusedMemoryReduced){
-				vmsStarving += 1;
+				starvingVMs[i] = 1;
+				nStarvingVMs += 1;
 			}
 		}
 	}
 
-	printf("Number of starving VMS....%d\n", vmsStarving);
+	printf("Number of starving VMS....%d\n", starvingVMs);
 
 	for (int i = 0; i < ndomains; i++)
 	{
@@ -179,12 +184,13 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			double releasedMemory = 0;
 
 			// if not all vms are starving, sacrifice idle vms
-			if (vmsStarving != ndomains)
+			if (nStarvingVMs != ndomains)
 			{
 				for (int j = 0; j < ndomains; j++)
 				{
 					// get memory from other vms if vm has more than 100MB (unused) and more than 200MB (actual)
-					if (j != i)
+					// ensure that starving vms are not sacrificed
+					if (!starvingVMs[j])
 					{ 
 						if (domainStats[j].unused >= 100 && domainStats[j].actual > 200)
 						{
@@ -232,7 +238,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				}
 			}
 
-			if (vmsStarving != 1)
+			if (nStarvingVMs != 1)
 			{
 				continue;
 			}
@@ -255,7 +261,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);	
 			}
 		} else {
-			if (vmsStarving != 1)
+			if (nStarvingVMs != 1)
 			{
 				continue;
 			}
