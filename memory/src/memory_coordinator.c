@@ -255,7 +255,12 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);	
 			}
 		} else {
-			break;
+			if (vmsStarving == 1)
+			{
+				break;
+			} else {
+				continue;
+			}
 		}
 		
 	}
