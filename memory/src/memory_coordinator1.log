@@ -351,20 +351,11 @@ Memory (VM: aos_vm2)  Actual [512.0], Unused: [341.61328125]
 Memory (VM: aos_vm3)  Actual [200.0], Unused: [55.59375]
 Memory (VM: aos_vm4)  Actual [200.0], Unused: [55.84765625]
 Memory (VM: aos_vm1)  Actual [200.0], Unused: [54.16796875]
-]0;azureuser@pr1-vm: ~/AOS_Project1/memory/test[01;32mazureuser@pr1-vm[00m:[01;34m~/AOS_Project1/memory/test[00m$ kex_exchange_identification: read: Connection reset by peer
-kex_exchange_identification: read: Connection reset by peer
-exexec request failed on channel 0
-run: no process found
-ir
+]0;azureuser@pr1-vm: ~/AOS_Project1/memory/test[01;32mazureuser@pr1-vm[00m:[01;34m~/AOS_Project1/memory/test[00m$ kex_exchange_identification: read: Connection reset by peer
 
-Command 'exir' not found, did you mean:
+kex_exchange_identification: read: Connection reset by peer
 
-  command 'exif' from deb exif (0.6.21-2)
-  command 'exim' from deb exim4-daemon-heavy (4.93-13ubuntu1.12)
-  command 'exim' from deb exim4-daemon-light (4.93-13ubuntu1.12)
-  command 'expr' from deb coreutils (8.30-3ubuntu2)
-
-Try: sudo apt install <deb name>
+exec request failed on channel 0
 
 ]0;azureuser@pr1-vm: ~/AOS_Project1/memory/test[01;32mazureuser@pr1-vm[00m:[01;34m~/AOS_Project1/memory/test[00m$ exit
 exit
