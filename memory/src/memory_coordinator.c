@@ -195,7 +195,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				domainStats[i].starving = 1;
 				domainStats[i].attainedMax = domainStats[i].actual;
 				printf("Starving domain %d now has memory of %.2f MB from a sacrificed domain\n", i, domainStats[i].actual);
-				break;
+				continue;
 			} else { 
 				// if no vm was sacrificed, get memory from host if host has more than 200MB (unused)
 				if ((hostFreeMemory) >= 200)
@@ -211,7 +211,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					domainStats[i].starving = 1;
 					domainStats[i].attainedMax = domainStats[i].actual;
 					printf("Starving domain %d now has memory of %.2f MB from the host\n", i, domainStats[i].actual);
-					break;
+					continue;
 				}
 			}
 		}
@@ -229,8 +229,6 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);	
 			}
 		}
-
-		break;
 	}
 
 	free(domains);
