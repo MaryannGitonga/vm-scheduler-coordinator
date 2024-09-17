@@ -64,5 +64,86 @@ COMPLETE THE IMPLEMENTATION
 */
 void MemoryScheduler(virConnectPtr conn, int interval)
 {
+	printf("Scheduler started...\n");
+	virDomainPtr *domains, domain;
+	int ndomains, result, nvcpus, nparams, npcpus;
+	virTypedParameterPtr params;
+
+	// 2. get all active running VMs
+	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
+
+	if(ndomains < 0) {
+		fprintf(stderr, "Failed to get active running VMs\n");
+		return;
+	}
+
+	npcpus = virNodeGetCPUMap(conn, NULL, NULL, 0);
+    if (npcpus < 0) {
+        fprintf(stderr, "Failed to get number of pcpus\n");
+        free(domains);
+        return;
+    }
+
+	for (int i = 0; i < ndomains; i++)
+	{
+		domain = domains[i];
+		result = virDomainSetMemoryStatsPeriod(domain, interval);
+		if (result != 0)
+		{
+			fprintf(stderr, "Failed to set memory stats period.\n");
+		}
+
+		// get memory params
+		// virDomainGetMemoryParameters
+		result = virDomainGetMemoryParameters(domain, NULL, &nparams, 0);
+		if (result != 0)
+		{
+			fprintf(stderr, "Failed to get nparams.\n");
+		}
+
+		result = virDomainGetMemoryParameters(domain, params, &nparams, 0);
+		if(result != 0){
+			fprintf(stderr, "Failed to get memory params.\n");
+		}
+
+		for (int j = 0; j < nparams; j++)
+		{
+			printf("  %s: ", params[j].field);
+            switch (params[j].type)
+            {
+                case VIR_TYPED_PARAM_INT:
+                    printf("%d\n", params[j].value.i);
+                    break;
+                case VIR_TYPED_PARAM_UINT:
+                    printf("%u\n", params[j].value.ui);
+                    break;
+                case VIR_TYPED_PARAM_LLONG:
+                    printf("%lld\n", params[j].value.l);
+                    break;
+                case VIR_TYPED_PARAM_ULLONG:
+                    printf("%llu\n", params[j].value.ul);
+                    break;
+                case VIR_TYPED_PARAM_DOUBLE:
+                    printf("%f\n", params[j].value.d);
+                    break;
+                case VIR_TYPED_PARAM_BOOLEAN:
+                    printf("%s\n", params[j].value.b ? "true" : "false");
+                    break;
+                case VIR_TYPED_PARAM_STRING:
+                    printf("%s\n", params[j].value.s);
+                    break;
+                default:
+                    printf("Unknown type\n");
+                    break;
+            }
+		}
+		
+		
+
+		// virDomainMemoryStats
+
+		// virDomainSetMemory
+		
+	}
 	
 }
