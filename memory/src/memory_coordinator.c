@@ -270,29 +270,35 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 		if (nStarvingVMs > 0)
 		{
-			double lowestVMMemory = domainStats[i].maxLimit / 4;
 			// once starving vm has attained the max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
-			if (starvingVMs[i] && domainStats[i].attainedMax && (domainStats[i].actual > lowestVMMemory))
+			if (starvingVMs[i] && domainStats[i].attainedMax)
 			{
-				double releasedMemory = (domainStats[i].actual - 104) > lowestVMMemory ? MIN((domainStats[i].actual - 104), 104): (domainStats[i].actual - lowestVMMemory);
-				domainStats[i].actual = domainStats[i].actual - releasedMemory;
-
-				if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
-					fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
-				}
-				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
-			} else {
-				printf("Domain %d: starving %d: attained max: %d: lowest memory attainable: %.2f MB\n", i, starvingVMs[i], domainStats[i].attainedMax, lowestVMMemory);
-				if (nStarvingVMs > 1)
+				double lowestVMMemory = domainStats[i].maxLimit / 4;
+				if ((domainStats[i].actual > lowestVMMemory))
 				{
+					double releasedMemory = MIN((domainStats[i].actual - 104), 104);
+					releasedMemory = MIN(releasedMemory, domainStats[i].actual - lowestVMMemory);
+
+					// double releasedMemory = (domainStats[i].actual - 104) > lowestVMMemory ? MIN((domainStats[i].actual - 104), 104): (domainStats[i].actual - lowestVMMemory);
+					// domainStats[i].actual = domainStats[i].actual - releasedMemory;
+
+					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
+						fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
+					}
+					printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
+				} else {
+					printf("Domain %d: starving %d: memory: %.2f: attained max: %d: lowest memory: %.2f MB\n", i, starvingVMs[i], domainStats[i].actual, domainStats[i].attainedMax, lowestVMMemory);
+					if (nStarvingVMs > 1)
+					{
+						starvingVMs[i] = 0; // vm is no longer starving
+						nStarvingVMs -= 1;
+						continue;
+					}
+
 					starvingVMs[i] = 0; // vm is no longer starving
 					nStarvingVMs -= 1;
-					continue;
+					break;
 				}
-
-				starvingVMs[i] = 0; // vm is no longer starving
-				nStarvingVMs -= 1;
-				break;
 			}
 		}
 		
