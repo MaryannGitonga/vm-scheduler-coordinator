@@ -281,10 +281,11 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				}
 				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
 			} else {
+				starvingVMs[i] = 0; // vm is no longer starving
+				nStarvingVMs -= 1;
+
 				if (nStarvingVMs != 1)
 				{
-					starvingVMs[i] = 0; // vm is no longer starving
-					nStarvingVMs -= 1;
 					continue;
 				}
 
