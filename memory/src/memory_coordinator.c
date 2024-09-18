@@ -236,8 +236,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
 				}
 
-				domainStats[i].attainedMax = domainStats[i].actual == domainStats[i].maxLimit ? 1 : 0;
-				printf("Starving domain %d now has memory of %.2f MB from a sacrificed domain\n", i, domainStats[i].actual);
+				domainStats[i].attainedMax = (domainStats[i].actual == domainStats[i].maxLimit);
+				printf("Starving domain %d now has memory of %.2f MB from a sacrificed domain... attained max: %d\n", i, domainStats[i].actual, domainStats[i].attainedMax);
 			} else {
 				// if no vm was sacrificed, get memory from host if host has more than 200MB (unused)
 				if ((hostFreeMemory) >= 200)
@@ -251,11 +251,12 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 						fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
 					}
 
-					domainStats[i].attainedMax = domainStats[i].actual == domainStats[i].maxLimit ? 1 : 0;
-					printf("Starving domain %d now has memory of %.2f MB from the host\n", i, domainStats[i].actual);
+					domainStats[i].attainedMax = (domainStats[i].actual == domainStats[i].maxLimit);
+					printf("Starving domain %d now has memory of %.2f MB from the host... attained max: %d\n", i, domainStats[i].actual, domainStats[i].attainedMax);
 				} else {
 					// if host can no longer give memory, reclaim memory from starving vms
 					domainStats[i].attainedMax = 1;
+					printf("Host has no more memory to give... attained max: %d\n", domainStats[i].attainedMax);
 				}
 			}
 
