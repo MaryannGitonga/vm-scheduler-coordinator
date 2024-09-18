@@ -281,7 +281,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				}
 				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
 			} else {
-				printf("Domain %d: starving %d: attained max: %d: lowest memory attainable: %d", i, starvingVMs[i], domainStats[i].attainedMax, lowestVMMemory);
+				printf("Domain %d: starving %d: attained max: %d: lowest memory attainable: %.2f MB", i, starvingVMs[i], domainStats[i].attainedMax, lowestVMMemory);
 				if (nStarvingVMs > 1)
 				{
 					starvingVMs[i] = 0; // vm is no longer starving
