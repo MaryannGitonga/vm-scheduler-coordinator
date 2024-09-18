@@ -12,11 +12,11 @@
 int is_exit = 0; // DO NOT MODIFY THE VARIABLE
 typedef struct {
     double actual;
+    double prevActual;
     double unused;
 	double prevUnused;
     double maxLimit;
-	int starving;
-	double attainedMax;
+	int attainedMax;
 } DomainMemoryStats;
 
 DomainMemoryStats *domainStats = NULL;
@@ -148,15 +148,16 @@ void MemoryScheduler(virConnectPtr conn, int interval)
         }
 
 		domainStats[i].prevUnused = domainStats[i].unused;
+		domainStats[i].prevActual = domainStats[i].actual;
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
 
-		printf("Memory (VM %d) Actual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit);
+		printf("Memory (VM %d) Actual: [%.2f MB], PrevActual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].prevActual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit);
 		
 	}
 
-	// get starving domains -> marked as starving from prev iter. OR has diminishing
+	// get starving domains -> marked as starving from prev iter.
 	if (nStarvingVMs == 0)
 	{	// if not initilized yet
 		if (starvingVMs == NULL)
@@ -167,21 +168,34 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		memset(starvingVMs, 0, ndomains * sizeof(int));
 		for (int i = 0; i < ndomains; i++)
 		{
-			int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 1.0));
-			if (unusedMemoryReduced){
+			int isStarving = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 10.0) && (domainStats[i].prevActual - domainStats[i].actual == 0));
+			if (isStarving){
+				starvingVMs[i] = 1;
+				nStarvingVMs += 1;
+			}
+		}
+	} else if (nStarvingVMs != ndomains)
+	{
+		// if all vms are not starving, there could be a dynamic change in number of starving/non-starving vms
+		for (int i = 0; i < ndomains; i++)
+		{
+			int isStarving = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 10.0) && (domainStats[i].prevActual - domainStats[i].actual == 0));
+			if (isStarving && !starvingVMs[i]){
+				// if vm is starving and wasn't initially marked as starving
 				starvingVMs[i] = 1;
 				nStarvingVMs += 1;
 			}
 		}
 	}
+	
 
 	printf("Number of starving VMS....%d\n", nStarvingVMs);
 
 	for (int i = 0; i < ndomains; i++)
 	{
-		int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 1.0));
+		int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 10.0));
 		// while the vm's unused memory is reducing AND the next possible actual memory has not exceeded the limit AND not attained max yet
-		if ((domainStats[i].starving || unusedMemoryReduced) && domainStats[i].actual < domainStats[i].maxLimit &&  domainStats[i].attainedMax != domainStats[i].maxLimit)
+		if ((starvingVMs[i] || unusedMemoryReduced) && domainStats[i].actual < domainStats[i].maxLimit &&  !domainStats[i].attainedMax)
 		{
 			printf("Re-allocating memory.....\n");
 			int sacrificedVM = -1;
@@ -221,8 +235,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
 					fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
 				}
-				domainStats[i].starving = 1;
-				domainStats[i].attainedMax = domainStats[i].actual;
+
+				domainStats[i].attainedMax = (domainStats[i].actual == domainStats[i].maxLimit);
 				printf("Starving domain %d now has memory of %.2f MB from a sacrificed domain\n", i, domainStats[i].actual);
 			} else {
 				// if no vm was sacrificed, get memory from host if host has more than 200MB (unused)
@@ -236,9 +250,12 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
 						fprintf(stderr, "Failed to set actual memory of %.2f MB to the starving domain %d\n", domainStats[i].actual, i);
 					}
-					domainStats[i].starving = 1;
-					domainStats[i].attainedMax = domainStats[i].actual;
+
+					domainStats[i].attainedMax = (domainStats[i].actual == domainStats[i].maxLimit);
 					printf("Starving domain %d now has memory of %.2f MB from the host\n", i, domainStats[i].actual);
+				} else {
+					// if host can no longer give memory, reclaim memory from starving vms
+					domainStats[i].attainedMax = 1;
 				}
 			}
 
@@ -250,23 +267,22 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			break;
 		}
 
+		double lowestVMMemory = domainStats[i].maxLimit / 4;
 		// once starving vm has attained the max limit, release memory until it's back to the initial memory 512MB (2048MB / 4 vms)
-		if (domainStats[i].starving && domainStats[i].attainedMax == domainStats[i].maxLimit)
+		if (starvingVMs[i] && domainStats[i].attainedMax && domainStats[i].actual > lowestVMMemory)
 		{
-			double lowestVMMemory = domainStats[i].maxLimit / 4;
-			if (domainStats[i].actual > lowestVMMemory)
-			{
-				double releasedMemory = (domainStats[i].actual - 104) > lowestVMMemory ? MIN((domainStats[i].actual - 104), 104): (domainStats[i].actual - lowestVMMemory);
-				domainStats[i].actual = domainStats[i].actual - releasedMemory;
+			double releasedMemory = (domainStats[i].actual - 104) > lowestVMMemory ? MIN((domainStats[i].actual - 104), 104): (domainStats[i].actual - lowestVMMemory);
+			domainStats[i].actual = domainStats[i].actual - releasedMemory;
 
-				if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
-					fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
-				}
-				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);	
+			if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
+				fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
 			}
+			printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
 		} else {
 			if (nStarvingVMs != 1)
 			{
+				starvingVMs[i] = 0; // vm is no longer starving
+				nStarvingVMs -= 1;
 				continue;
 			}
 
