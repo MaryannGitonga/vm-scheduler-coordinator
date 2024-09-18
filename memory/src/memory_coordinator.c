@@ -276,11 +276,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				double lowestVMMemory = domainStats[i].maxLimit / 4;
 				if ((domainStats[i].actual > lowestVMMemory))
 				{
-					double releasedMemory = MIN((domainStats[i].actual - 104), 104);
-					releasedMemory = MIN(releasedMemory, domainStats[i].actual - lowestVMMemory);
-
-					// double releasedMemory = (domainStats[i].actual - 104) > lowestVMMemory ? MIN((domainStats[i].actual - 104), 104): (domainStats[i].actual - lowestVMMemory);
-					// domainStats[i].actual = domainStats[i].actual - releasedMemory;
+					double releasedMemory = (domainStats[i].actual - 104) > lowestVMMemory ? MIN((domainStats[i].actual - 104), 104): (domainStats[i].actual - lowestVMMemory);
+					domainStats[i].actual = domainStats[i].actual - releasedMemory;
 
 					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
 						fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
