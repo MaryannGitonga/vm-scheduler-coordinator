@@ -138,7 +138,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 					if (VIR_CPU_USED(cpuMap, k)) {
 						printf("aos_vm_%d on pcpu %d usage: %.2f\n", i + 1, k, vcpuUsage[i]);
 						pcpuUsage[k] += vcpuUsage[i];
-						printf("pcpu %d usage: %.2f\n", k, pcpuUsage[k]);
 						break;
 					}
 				}
