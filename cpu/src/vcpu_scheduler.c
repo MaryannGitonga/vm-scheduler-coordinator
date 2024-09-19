@@ -158,7 +158,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	printf("Total usage: %.2f\n", totalCpuUsage);
 	printf("Target usage per pcpu: %.2f\n", targetUsagePerPcpu);
 
-	int pcpusBalanced = 1;
+	// int pcpusBalanced = 1;
     for (int i = 0; i < npcpus; i++) {
 		printf("pcpu %d usage: %.2f\n", i, pcpuUsage[i]);
         // if (fabs(pcpuUsage[i] - targetUsagePerPcpu) > 0.1) {
