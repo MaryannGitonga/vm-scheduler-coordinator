@@ -131,9 +131,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		for (int j = 0; j < nparams; j++)
 		{
 			if (strcmp(params[j].field, "cpu_time") == 0) {
+				double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
 				if (prevVcpuTimes[i] != 0)
 				{
-					double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
 					double usage = (vcpuTimeInSeconds - prevVcpuTimes[i])/(interval * nvcpus) * 100;
 					printf("aos_vm_%d time: %.2f\n", i + 1, vcpuTimeInSeconds);
 					vcpuUsage[i] = usage;
@@ -144,11 +144,10 @@ void CPUScheduler(virConnectPtr conn, int interval)
 							break;
 						}
 					}
-
-					prevVcpuTimes[i] = vcpuTimeInSeconds;
 					totalCpuUsage += vcpuUsage[i];
-					break;	
 				}
+				prevVcpuTimes[i] = vcpuTimeInSeconds;
+				break;
 			}
 		}
 		
