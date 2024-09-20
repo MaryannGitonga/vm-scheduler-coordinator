@@ -9,9 +9,17 @@
 #define MIN(a,b) ((a)<(b)?a:b)
 #define MAX(a,b) ((a)>(b)?a:b)
 
+typedef struct
+{
+	double usage;
+	double prevTime;
+	int pinnedPcpu;
+} DomainCPUStats;
+
+DomainCPUStats *domainStats = NULL;
+
+
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
-double totalCpuUsage = 0.0;
-double *prevVcpuTimes = NULL; // store previous vcpu times
 
 void CPUScheduler(virConnectPtr conn,int interval);
 
@@ -86,17 +94,13 @@ void CPUScheduler(virConnectPtr conn, int interval)
         return;
     }
 
-	if (prevVcpuTimes == NULL) {
-        prevVcpuTimes = calloc(8, sizeof(double));
-        if (prevVcpuTimes == NULL) {
-            fprintf(stderr, "Failed to allocate memory for prevVcpuTimes\n");
-            free(domains);
-            return;
-        }
-    }
-
 	double *pcpuUsage = calloc(npcpus, sizeof(double));
-	double *vcpuUsage = calloc(8, sizeof(double));
+	if (domainStats == NULL)
+	{
+		domainStats = malloc(ndomains * (DomainCPUStats));
+		memset(domainStats, 0, ndomains * sizeof(DomainCPUStats));
+	}
+	
 
 	for (int i = 0; i < ndomains; i++) {
 		domain = domains[i];
@@ -134,22 +138,20 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		{
 			if (strcmp(params[j].field, "vcpu_time") == 0) {
 				double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
-				if (prevVcpuTimes[i] != 0)
+				if (domainStats[i].time != 0)
 				{
-					double usage = (vcpuTimeInSeconds - prevVcpuTimes[i])/(interval);
-					printf("Diff for aos_vm_%d: %.2f seconds", i + 1, (vcpuTimeInSeconds - prevVcpuTimes[i]));
+					double usage = (vcpuTimeInSeconds - domainStats[i].prevTime)/interval;
+					domainStats[i].usage = usage;
 					printf("aos_vm_%d usage: %.2f\n", i + 1, usage);
-					vcpuUsage[i] = usage;
 					for (int k = 0; k < npcpus; k++) {
 						if (VIR_CPU_USED(cpuMap, k)) {
-							printf("aos_vm_%d on pcpu %d usage: %.2f\n", i + 1, k, vcpuUsage[i]);
-							pcpuUsage[k] += vcpuUsage[i];
+							domainStats[i].pinnedPcpu = k;
+							pcpuUsage[k] += domainStats[i].usage;
 							break;
 						}
 					}
-					totalCpuUsage += vcpuUsage[i];
 				}
-				prevVcpuTimes[i] = vcpuTimeInSeconds;
+				domainStats[i].prevTime = vcpuTimeInSeconds;
 				break;
 			}
 		}
@@ -214,7 +216,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
     //     free(newCpuMap);
     // }
 
-	free(vcpuUsage);
 	free(pcpuUsage);
 	free(domains);
 }
