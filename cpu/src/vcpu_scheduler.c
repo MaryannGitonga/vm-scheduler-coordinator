@@ -157,7 +157,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			domainStats[i].usage = usage;
 			// domainStats[i].pinnedPcpu = j;
 			// pcpuUsage[j] += domainStats[i].usage;
-			printf("Domain %d is pinned to cpu %d\n", i, j);
+			// printf("Domain %d is pinned to cpu %d\n", i, j);
 		}
 		domainStats[i].prevTime = vcpuTimeInSeconds;
 		
