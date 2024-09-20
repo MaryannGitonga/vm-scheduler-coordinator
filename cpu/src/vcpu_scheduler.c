@@ -141,7 +141,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				{
 					double usage = (vcpuTimeInSeconds - domainStats[i].prevTime)/interval;
 					domainStats[i].usage = usage;
-					printf("aos_vm_%d usage: %.2f\n", i + 1, usage);
 					for (int k = 0; k < npcpus; k++) {
 						if (VIR_CPU_USED(cpuMap, k)) {
 							domainStats[i].pinnedPcpu = k;
@@ -154,6 +153,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				break;
 			}
 		}
+
+		printf("pcpu: %d aos_vm_%d usage: %.2f\n", domainStats[i].pinnedPcpu, i, domainStats[i].usage);
 		
 
 		free(params);
