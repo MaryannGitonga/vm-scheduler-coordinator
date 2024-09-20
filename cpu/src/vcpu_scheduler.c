@@ -119,76 +119,44 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		printf("Memory Parameters for aos_vm_%d:\n", i + 1);
-        for (int j = 0; j < nparams; j++)
-        {
-            printf("  %s: ", params[j].field);
-            switch (params[j].type)
-            {
-                case VIR_TYPED_PARAM_INT:
-                    printf("%d\n", params[j].value.i);
-                    break;
-                case VIR_TYPED_PARAM_UINT:
-                    printf("%u\n", params[j].value.ui);
-                    break;
-                case VIR_TYPED_PARAM_LLONG:
-                    printf("%lld\n", params[j].value.l);
-                    break;
-                case VIR_TYPED_PARAM_ULLONG:
-                    printf("%llu\n", params[j].value.ul);
-                    break;
-                case VIR_TYPED_PARAM_DOUBLE:
-                    printf("%f\n", params[j].value.d);
-                    break;
-                case VIR_TYPED_PARAM_BOOLEAN:
-                    printf("%s\n", params[j].value.b ? "true" : "false");
-                    break;
-                case VIR_TYPED_PARAM_STRING:
-                    printf("%s\n", params[j].value.s);
-                    break;
-                default:
-                    printf("Unknown type\n");
-                    break;
-            }
-        }
-
-		// unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
-		// result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
-		// if (result < 0) {
-		// 	fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-		// 	free(params);
-		// 	free(cpuMap);
-		// 	continue;
-		// }
+		unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
+		result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
+		if (result < 0) {
+			fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
+			free(params);
+			free(cpuMap);
+			continue;
+		}
 
 		printf("Nvcpus....%d\n", nvcpus);
 
-		// for (int j = 0; j < nparams; j++)
-		// {
-		// 	if (strcmp(params[j].field, "cpu_time") == 0) {
-		// 		double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
-		// 		if (prevVcpuTimes[i] != 0)
-		// 		{
-		// 			double usage = (vcpuTimeInSeconds - prevVcpuTimes[i])/(interval);
-		// 			printf("aos_vm_%d time: %.2f\n", i + 1, vcpuTimeInSeconds);
-		// 			vcpuUsage[i] = usage;
-		// 			for (int k = 0; k < npcpus; k++) {
-		// 				if (VIR_CPU_USED(cpuMap, k)) {
-		// 					printf("aos_vm_%d on pcpu %d usage: %.2f\n", i + 1, k, vcpuUsage[i]);
-		// 					pcpuUsage[k] += vcpuUsage[i];
-		// 					break;
-		// 				}
-		// 			}
-		// 			totalCpuUsage += vcpuUsage[i];
-		// 		}
-		// 		prevVcpuTimes[i] = vcpuTimeInSeconds;
-		// 		break;
-		// 	}
-		// }
+		for (int j = 0; j < nparams; j++)
+		{
+			if (strcmp(params[j].field, "vcpu_time") == 0) {
+				double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
+				if (prevVcpuTimes[i] != 0)
+				{
+					double usage = (vcpuTimeInSeconds - prevVcpuTimes[i])/(interval);
+					printf("Diff for aos_vm_%d: %.2f seconds", i + 1, (vcpuTimeInSeconds - prevVcpuTimes[i]));
+					printf("aos_vm_%d usage: %.2f\n", i + 1, usage);
+					vcpuUsage[i] = usage;
+					for (int k = 0; k < npcpus; k++) {
+						if (VIR_CPU_USED(cpuMap, k)) {
+							printf("aos_vm_%d on pcpu %d usage: %.2f\n", i + 1, k, vcpuUsage[i]);
+							pcpuUsage[k] += vcpuUsage[i];
+							break;
+						}
+					}
+					totalCpuUsage += vcpuUsage[i];
+				}
+				prevVcpuTimes[i] = vcpuTimeInSeconds;
+				break;
+			}
+		}
 		
 
 		free(params);
-		// free(cpuMap);
+		free(cpuMap);
 	}
 
 	// double targetUsagePerPcpu = totalCpuUsage / npcpus;
