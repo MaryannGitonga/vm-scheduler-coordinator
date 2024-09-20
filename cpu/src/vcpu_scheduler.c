@@ -149,13 +149,13 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
 		double timeDiff = (vcpuTimeInSeconds - domainStats[i].prevTime);
-		printf("VCPU time diff on domain %d, %2f, interval %2f\n", i, timeDiff, interval);
+		printf("VCPU time diff on domain %d, %2f, interval %d\n", i, timeDiff, interval);
 		if (domainStats[i].prevTime != 0)
 		{
 			printf("Previous domain %d time is not zero.\n", i);
 			double usage = timeDiff/interval;
 			domainStats[i].usage = usage;
-			domainStats[i].pinnedPcpu = j;
+			// domainStats[i].pinnedPcpu = j;
 			pcpuUsage[j] += domainStats[i].usage;
 			printf("Domain %d is pinned to cpu %d\n", i, j);
 		}
