@@ -133,58 +133,59 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		printf("Npcpus....%d\n", npcpus);
 
+		double vcpuTimeInSeconds = 0;
 		for (int j = 0; j < npcpus; j++)
 		{
 			for (int k = 0; k < nparams; k++)
 			{
 				int p = (j * nparams) + k;
 				if (strcmp(params[p].field, "vcpu_time") == 0) {
-					double vcpuTimeInSeconds = params[p].value.ul / pow(10, 9);
-				
-					printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
-					if (domainStats[i].prevTime != 0)
-					{
-						printf("Previous domain %d time is not zero.\n", i);
-						double usage = (vcpuTimeInSeconds - domainStats[i].prevTime)/interval;
-						domainStats[i].usage = usage;
-						if (VIR_CPU_USED(cpuMap, j)) {
-							domainStats[i].pinnedPcpu = j;
-							pcpuUsage[j] += domainStats[i].usage;
-							printf("Domain %d is pinned to cpu %d\n", i, j);
-						}
-					}
-					domainStats[i].prevTime = vcpuTimeInSeconds;
+					vcpuTimeInSeconds += params[p].value.ul / pow(10, 9);
 				}
 
 			}
 			
 		}
+
+		printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
+		double timeDiff = (vcpuTimeInSeconds - domainStats[i].prevTime);
+		printf("VCPU time diff on domain %d, %2f, interval %2f\n", i, timeDiff, interval);
+		if (domainStats[i].prevTime != 0)
+		{
+			printf("Previous domain %d time is not zero.\n", i);
+			double usage = timeDiff/interval;
+			domainStats[i].usage = usage;
+			domainStats[i].pinnedPcpu = j;
+			pcpuUsage[j] += domainStats[i].usage;
+			printf("Domain %d is pinned to cpu %d\n", i, j);
+		}
+		domainStats[i].prevTime = vcpuTimeInSeconds;
 		
 
-		for (int j = 0; j < nparams; j++)
-		{
-			printf("Domain %d has param %s\n", i, params[j].field);
-			if (strcmp(params[j].field, "vcpu_time") == 0) {
-				double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
+		// for (int j = 0; j < nparams; j++)
+		// {
+		// 	printf("Domain %d has param %s\n", i, params[j].field);
+		// 	if (strcmp(params[j].field, "vcpu_time") == 0) {
+		// 		double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
 				
-				printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
-				if (domainStats[i].prevTime != 0)
-				{
-					printf("Previous domain %d time is not zero.\n", i);
-					double usage = (vcpuTimeInSeconds - domainStats[i].prevTime)/interval;
-					domainStats[i].usage = usage;
-					for (int k = 0; k < npcpus; k++) {
-						if (VIR_CPU_USED(cpuMap, k)) {
-							domainStats[i].pinnedPcpu = k;
-							pcpuUsage[k] += domainStats[i].usage;
-							printf("Domain %d is pinned to cpu %d\n", i, k);
-						}
-					}
-				}
-				domainStats[i].prevTime = vcpuTimeInSeconds;
-				break;
-			}
-		}
+		// 		printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
+		// 		if (domainStats[i].prevTime != 0)
+		// 		{
+		// 			printf("Previous domain %d time is not zero.\n", i);
+		// 			double usage = (vcpuTimeInSeconds - domainStats[i].prevTime)/interval;
+		// 			domainStats[i].usage = usage;
+		// 			for (int k = 0; k < npcpus; k++) {
+		// 				if (VIR_CPU_USED(cpuMap, k)) {
+		// 					domainStats[i].pinnedPcpu = k;
+		// 					pcpuUsage[k] += domainStats[i].usage;
+		// 					printf("Domain %d is pinned to cpu %d\n", i, k);
+		// 				}
+		// 			}
+		// 		}
+		// 		domainStats[i].prevTime = vcpuTimeInSeconds;
+		// 		break;
+		// 	}
+		// }
 
 		printf("pcpu: %d aos_vm_%d usage: %.2f\n", domainStats[i].pinnedPcpu, i + 1, domainStats[i].usage);
 		
