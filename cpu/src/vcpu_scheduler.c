@@ -104,7 +104,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < ndomains; i++) {
 		domain = domains[i];
 
-		nvcpus = virDomainGetCPUStats(domain, NULL, 0, 0, 0, 0);
+		// nvcpus = virDomainGetCPUStats(domain, NULL, 0, 0, 0, 0);
 
 		nparams = virDomainGetCPUStats(domain, NULL, 0, 0, 1, 0);
 		if (nparams < 0)
@@ -113,8 +113,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		params = calloc(nvcpus * nparams, sizeof(virTypedParameter));
-		result = virDomainGetCPUStats(domain, params, nparams, 0, nvcpus, 0);
+		params = calloc(npcpus * nparams, sizeof(virTypedParameter));
+		result = virDomainGetCPUStats(domain, params, nparams, 0, npcpus, 0);
 		if (result < 0)
 		{
 			fprintf(stderr, "Failed to get vcpu stats for domain %d\n", i);
@@ -131,7 +131,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		printf("Nvcpus....%d\n", nvcpus);
+		printf("Npcpus....%d\n", npcpus);
 
 		for (int j = 0; j < nparams; j++)
 		{
