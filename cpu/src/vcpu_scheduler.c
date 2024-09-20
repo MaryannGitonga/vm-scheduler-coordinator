@@ -66,7 +66,6 @@ int main(int argc, char *argv[])
 	}
 
 	// Closing the connection
-	free(prevVcpuTimes);
 	virConnectClose(conn);
 	return 0;
 }
@@ -97,7 +96,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	double *pcpuUsage = calloc(npcpus, sizeof(double));
 	if (domainStats == NULL)
 	{
-		domainStats = malloc(ndomains * (DomainCPUStats));
+		domainStats = malloc(ndomains * sizeof(DomainCPUStats));
 		memset(domainStats, 0, ndomains * sizeof(DomainCPUStats));
 	}
 	
@@ -138,7 +137,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		{
 			if (strcmp(params[j].field, "vcpu_time") == 0) {
 				double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
-				if (domainStats[i].time != 0)
+				if (domainStats[i].prevTime != 0)
 				{
 					double usage = (vcpuTimeInSeconds - domainStats[i].prevTime)/interval;
 					domainStats[i].usage = usage;
