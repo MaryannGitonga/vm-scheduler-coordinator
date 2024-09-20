@@ -145,7 +145,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 						if (VIR_CPU_USED(cpuMap, k)) {
 							domainStats[i].pinnedPcpu = k;
 							pcpuUsage[k] += domainStats[i].usage;
-							printf("Domain %d is pineed to cpu %d\n", i, k);
+							printf("Domain %d is pinned to cpu %d\n", i, k);
 						}
 					}
 				}
