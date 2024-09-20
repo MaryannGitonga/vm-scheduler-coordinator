@@ -135,10 +135,11 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		for (int j = 0; j < nparams; j++)
 		{
+			printf("Domain %d has param %s\n", i, params[j].field);
 			if (strcmp(params[j].field, "vcpu_time") == 0) {
 				double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
 				
-				printf("Domain %d vcpu time current %2f prev time %2f\n", vcpuTimeInSeconds, domainStats[i].prevTime);
+				printf("Domain %d vcpu time current %2f prev time %2f\n", k, vcpuTimeInSeconds, domainStats[i].prevTime);
 				if (domainStats[i].prevTime != 0)
 				{
 					printf("Previous domain %d time is not zero.\n", i);
