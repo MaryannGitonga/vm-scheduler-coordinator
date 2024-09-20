@@ -119,7 +119,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		printf("Memory Parameters for Domain ID %d:\n", domain);
+		printf("Memory Parameters for aos_vm_%d:\n", i + 1);
         for (int j = 0; j < nparams; j++)
         {
             printf("  %s: ", params[j].field);
