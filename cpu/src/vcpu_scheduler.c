@@ -75,7 +75,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 {
 	printf("Scheduler started...\n");
 	virDomainPtr *domains, domain;
-	int ndomains, result, nvcpus, nparams, npcpus;
+	int ndomains, result, nparams, npcpus;
 	virTypedParameterPtr params;
 
 	// get all active running VMs
@@ -139,7 +139,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			if (strcmp(params[j].field, "vcpu_time") == 0) {
 				double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
 				
-				printf("Domain %d vcpu time current %2f prev time %2f\n", k, vcpuTimeInSeconds, domainStats[i].prevTime);
+				printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
 				if (domainStats[i].prevTime != 0)
 				{
 					printf("Previous domain %d time is not zero.\n", i);
