@@ -16,6 +16,31 @@ typedef struct
 	int pinnedPcpu;
 } DomainCPUStats;
 
+double get_standard_deviation(double *values, int nvalues) {
+	// Calculate mean
+	double mean = 0;
+	for (int i = 0; i < nvalues; i++) {
+		mean += values[i];
+	}
+
+	mean = mean / nvalues;
+
+	double sumSquareDiffs = 0;
+	for (int i = 0; i < nvalues; i++) {
+		sumSquareDiffs += (values[i] - mean) * (values[i] - mean)
+	}
+
+	double meanSquareDiff = sumSquareDiffs / nvalues;
+	double stdev = sqrt(meanSquareDiff);
+	return stdev;
+}
+
+int are_cpus_balanced(double *cpuUsages, int ncpus) {
+	double stddev = get_standard_deviation(cpuUsages, ncpus);
+	printf("Standard deviation is %2f\n", stddev);
+	return stddev <= 0.05;
+}
+
 int DomainCPUStats_initialize_for_domain(DomainCPUStats *domainStats, int npcpus) {
 	domainStats->prevTimes = calloc(npcpus, sizeof(double));
 	if (domainStats->prevTimes == NULL) {
@@ -252,6 +277,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		pcpuUsage[i] = pcpuUsage[i] / interval;
 		printf("CPU %d normalized usage is %2f\n", i, pcpuUsage[i]);
 	}
+
+	int balanced = are_cpus_balanced(pcpuUsage, npcpus);
+	printf("Are CPUS balanced %d\n", balanced);
 
 	// double targetUsagePerPcpu = totalCpuUsage / npcpus;
 	// printf("Total usage: %.2f\n", totalCpuUsage);
