@@ -192,26 +192,12 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			continue;
 		}
 
-		printf("Nparams for domain %d: %d\n", i, nparams);
-
-		unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
-		result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
-		if (result < 0) {
-			fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-			free(params);
-			free(cpuMap);
-			continue;
-		}
-
-		printf("Npcpus....%d\n", npcpus);
-
 		for (int j = 0; j < npcpus; j++)
 		{
 			for (int k = 0; k < nparams; k++)
 			{
 				int p = (j * nparams) + k;
 				if (strcmp(params[p].field, "vcpu_time") == 0) {
-					printf("Domain %d vcpu_time %lld on cpu  %d\n", i, params[p].value.ul, j);
 					double vcpuTimeInSeconds = params[p].value.ul / pow(10, 9);
 					printf("Domain %d vcpu_time %2f seconds on cpu  %d\n", i, vcpuTimeInSeconds, j);
 					printf("Domain %d prev Time %2f seconds on cpu  %d\n", i, domainStats[i].prevTimes[j], j);
@@ -220,9 +206,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 					pcpuUsage[j] += timeDiff;
 					domainStats[i].prevTimes[j] = vcpuTimeInSeconds;
 				}
-
 			}
-			
 		}
 
 		// printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
@@ -285,7 +269,20 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	int balanced = are_cpus_balanced(pcpuUsage, npcpus);
-	printf("Are CPUS balanced %d\n", balanced);
+	
+	if(balanced){
+		goto done;
+	}
+
+	// unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
+	// result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
+	// if (result < 0) {
+	// 	fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
+	// 	free(params);
+	// 	free(cpuMap);
+	// 	continue;
+	// }
+
 
 	// double targetUsagePerPcpu = totalCpuUsage / npcpus;
 	// printf("Total usage: %.2f\n", totalCpuUsage);
