@@ -276,14 +276,14 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		goto done;
 	}
 
-	unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
-	result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
-	if (result < 0) {
-		fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-		free(params);
-		free(cpuMap);
-		continue;
-	}
+	// unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
+	// result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
+	// if (result < 0) {
+	// 	fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
+	// 	free(params);
+	// 	free(cpuMap);
+	// 	continue;
+	// }
 
 
 	// double targetUsagePerPcpu = totalCpuUsage / npcpus;
@@ -340,7 +340,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// 	}
     //     free(newCpuMap);
     // }
-	free(cpuMap);
+	// free(cpuMap);
 done:
 	free(pcpuUsage);
 	free(domains);
