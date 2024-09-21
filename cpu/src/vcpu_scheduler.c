@@ -253,7 +253,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		
 
 		free(params);
-		free(cpuMap);
 	}
 
 	if (first_iteration) {
@@ -338,6 +337,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// 	}
     //     free(newCpuMap);
     // }
+	// free(cpuMap);
 done:
 	free(pcpuUsage);
 	free(domains);
