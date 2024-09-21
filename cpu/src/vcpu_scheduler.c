@@ -140,6 +140,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			{
 				int p = (j * nparams) + k;
 				if (strcmp(params[p].field, "vcpu_time") == 0) {
+					printf("Domain %d vcpu_time %lld on cpu  %d\n", i, params[p].value.ul, j);
 					vcpuTimeInSeconds += params[p].value.ul / pow(10, 9);
 				}
 
