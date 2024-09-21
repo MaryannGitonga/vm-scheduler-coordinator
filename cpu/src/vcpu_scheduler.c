@@ -33,7 +33,7 @@ void DomainCPUStats_deinitialize_for_domain(DomainCPUStats *domainStats) {
 
 void DomainCPUStats_free(DomainCPUStats *stats, int ndomains) {
 	for (int i = 0; i < ndomains; i++) {
-		DomainCputStats_deinitialize_for_domain(&stats[i]);
+		DomainCPUStats_deinitialize_for_domain(&stats[i]);
 	}
 
 	free(stats);
@@ -55,12 +55,12 @@ DomainCPUStats* DomainCPUStats_create(int ndomains, int ncpus) {
 	return stats;
 
 error:
-	DomainCPUStats_free(stats);
+	DomainCPUStats_free(stats, ndomains);
 	return NULL;
 }
 
 DomainCPUStats *domainStats = NULL;
-int domains;
+int ndomains;
 
 
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
