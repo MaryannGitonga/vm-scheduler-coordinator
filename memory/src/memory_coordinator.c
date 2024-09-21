@@ -22,6 +22,7 @@ typedef struct {
 DomainMemoryStats *domainStats = NULL;
 int *starvingVMs = NULL;
 int nStarvingVMs = 0;
+int maxMemoryAllocatable = 104;
 
 void cleanUp() {
 	free(domainStats);
@@ -212,7 +213,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					{ 
 						if (domainStats[j].unused >= 100 && domainStats[j].actual > 200)
 						{
-							releasedMemory = MIN((domainStats[j].actual - 200), 104);
+							releasedMemory = MIN((domainStats[j].actual - 200), maxMemoryAllocatable);
 							releasedMemory = MIN(releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
 
 							domainStats[j].actual = domainStats[j].actual - releasedMemory;
@@ -242,7 +243,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				// if no vm was sacrificed, get memory from host if host has more than 200MB (unused)
 				if ((hostFreeMemory) >= 200)
 				{
-					releasedMemory = MIN((hostFreeMemory - 200), 104);
+					releasedMemory = MIN((hostFreeMemory - 200), maxMemoryAllocatable);
 					releasedMemory = MIN(releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
 
 					hostFreeMemory = hostFreeMemory - releasedMemory;
@@ -276,7 +277,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				double lowestVMMemory = domainStats[i].maxLimit / 4;
 				if ((domainStats[i].actual > lowestVMMemory))
 				{
-					double releasedMemory = (domainStats[i].actual - 104) > lowestVMMemory ? MIN((domainStats[i].actual - 104), 104): (domainStats[i].actual - lowestVMMemory);
+					double releasedMemory = (domainStats[i].actual - maxMemoryAllocatable) > lowestVMMemory ? MIN((domainStats[i].actual - maxMemoryAllocatable), maxMemoryAllocatable): (domainStats[i].actual - lowestVMMemory);
 					domainStats[i].actual = domainStats[i].actual - releasedMemory;
 
 					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
