@@ -274,7 +274,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	if (first_iteration) {
-		printf("First iteration, skip balancing...")
+		printf("First iteration, skip balancing...");
 		first_iteration = 0;
 		goto done;
 	}
