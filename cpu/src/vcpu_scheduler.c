@@ -89,6 +89,7 @@ error:
 
 DomainCPUStats *domainStats = NULL;
 int ndomains;
+int first_iteration = 1;
 
 
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
@@ -272,6 +273,12 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		free(cpuMap);
 	}
 
+	if (first_iteration) {
+		printf("First iteration, skip balancing...")
+		first_iteration = 0;
+		goto done;
+	}
+
 	for (int i = 0; i < npcpus; i++) {
 		printf("CPU %d overall usage time in last cycle is %2f seconds\n", i, pcpuUsage[i]);
 		pcpuUsage[i] = pcpuUsage[i] / interval;
@@ -335,7 +342,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// 	}
     //     free(newCpuMap);
     // }
-
+done:
 	free(pcpuUsage);
 	free(domains);
 }
