@@ -238,10 +238,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				int p = (j * nparams) + k;
 				if (strcmp(params[p].field, "vcpu_time") == 0) {
 					double vcpuTimeInSeconds = params[p].value.ul / pow(10, 9);
-					printf("Domain %d vcpu_time %2f seconds on cpu  %d\n", i, vcpuTimeInSeconds, j);
-					printf("Domain %d prev Time %2f seconds on cpu  %d\n", i, domainStats[i].prevTimes[j], j);
 					double timeDiff = vcpuTimeInSeconds - domainStats[i].prevTimes[j];
-					printf("Domain %d time diff on cpu %d %2f seconds\n", i, k, timeDiff);
 					pcpuUsage[j] += timeDiff;
 					domainUsage[i] += timeDiff;
 
@@ -351,13 +348,13 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	printf("Assigning planned mappings to domains\n");
 	for (int d = 0; d < ndomains; d++) {
 		unsigned char domainCpuMap = newCpuMappings[d];
+		printf("New CPU mapping for domain %d %d\n", d, domainCpuMap);
+
 		result = virDomainPinVcpu(domains[d], 0, &domainCpuMap, VIR_CPU_MAPLEN(npcpus));
 		if (result < 0) {
 			fprintf(stderr, "Failed to pin vcpus to domain %d\n", d);
 			goto done;
 		}
-
-		printf("New CPU mapping for domain %d %d\n", d, domainCpuMap);
 	}
 
 	
