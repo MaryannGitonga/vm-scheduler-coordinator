@@ -22,7 +22,7 @@ typedef struct {
 DomainMemoryStats *domainStats = NULL;
 int *starvingVMs = NULL;
 int nStarvingVMs = 0;
-int maxMemoryAllocatable = 104;
+int maxMemoryAllocatable = 50;
 
 void cleanUp() {
 	free(domainStats);
