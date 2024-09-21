@@ -178,6 +178,11 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	virDomainPtr *domains, domain;
 	int result, nparams, npcpus;
 	virTypedParameterPtr params;
+	double *plannedUsage = NULL;
+	unsigned char *newCpuMappings = NULL;
+	double *pcpuUsage = NULL;
+	double *domainUsage = NULL;
+
 
 	// get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -194,8 +199,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
         return;
     }
 
-	double *pcpuUsage = calloc(npcpus, sizeof(double));
-	double *domainUsage = calloc(ndomains, sizeof(double));
+	pcpuUsage = calloc(npcpus, sizeof(double));
+	domainUsage = calloc(ndomains, sizeof(double));
+
 	if (domainStats == NULL)
 	{
 		domainStats = DomainCPUStats_create(ndomains, npcpus);
@@ -275,8 +281,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	printf("pcpus not balanced. Mean usage %2f, stddev %2f\n", meanUsage, stddevUsage);
 
-	double *plannedUsage = calloc(npcpus, sizeof(double));
-	unsigned char *newCpuMappings = calloc(ndomains, sizeof(unsigned char));
+	plannedUsage = calloc(npcpus, sizeof(double));
+	newCpuMappings = calloc(ndomains, sizeof(unsigned char));
 	// to balance the cpus we attempt to find new pin mappings from scratch
 	// such that workloads will be distributed evenly
 	// Any domain can be repinned to any PCPU. We use the mean usage
