@@ -12,9 +12,52 @@
 typedef struct
 {
 	double usage;
-	double prevTime;
+	double *prevTimes;
 	int pinnedPcpu;
 } DomainCPUStats;
+
+int DomainCPUStats_initialize_for_domain(DomainCPUStats *domainStats, int npcpus) {
+	stats->prevTimes = calloc(npcpus, sizeof(double));
+	if (stats->prevTimes == NULL) {
+		return 0;
+	}
+
+	return -1;
+}
+
+void DomainCPUStats_deinitialize_for_domain(DomainCPUStats *domainStats) {
+	if (stats->prevTimes != NULL) {
+		free(stats->prevTimes);
+	}
+}
+
+void DomainCPUStats_free(DomainCPUStats *stats) {
+	for (int i = 0; i < ndomains; i++) {
+		DomainCputStats_deinitialize_for_domain(stats + i);
+	}
+
+	free(stats);
+}
+
+DomainCpuStats* DomainCPUStats_create(int ndomains, int ncpus) {
+	DomainCpuStats *stats = calloc(ndomains, sizeof(DomainCPUStats));
+	if (stats == NULL) {
+		return NULL;
+	}
+
+	for (int i = 0; i < ndomains; i++) {
+		if (DomainCPUStats_initialize_for_domain(stats + i, ncpus) == -1)
+		{
+			goto error;
+		}
+	}
+
+	return stats;
+
+error:
+	DomainCPUStats_free(stats);
+	return NULL;
+}
 
 DomainCPUStats *domainStats = NULL;
 
@@ -29,6 +72,7 @@ DO NOT CHANGE THE FOLLOWING FUNCTION
 void signal_callback_handler()
 {
 	printf("Caught Signal");
+	DomainCPUStats_free(domainStats);
 	is_exit = 1;
 }
 
@@ -96,8 +140,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	double *pcpuUsage = calloc(npcpus, sizeof(double));
 	if (domainStats == NULL)
 	{
-		domainStats = malloc(ndomains * sizeof(DomainCPUStats));
-		memset(domainStats, 0, ndomains * sizeof(DomainCPUStats));
+		domainStats = DomainCPUStats_create(ndomains, npcpus);
 	}
 	
 
@@ -133,7 +176,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 		printf("Npcpus....%d\n", npcpus);
 
-		double vcpuTimeInSeconds = 0;
 		for (int j = 0; j < npcpus; j++)
 		{
 			for (int k = 0; k < nparams; k++)
@@ -141,26 +183,29 @@ void CPUScheduler(virConnectPtr conn, int interval)
 				int p = (j * nparams) + k;
 				if (strcmp(params[p].field, "vcpu_time") == 0) {
 					printf("Domain %d vcpu_time %lld on cpu  %d\n", i, params[p].value.ul, j);
-					vcpuTimeInSeconds += params[p].value.ul / pow(10, 9);
+					double vcpuTimeInSeconds = params[p].value.ul / pow(10, 9);
+					double timeDiff = vcpuTimeInSeconds - domainStats[i].prevTimes[j];
+					pcpuUsage[j] += timeDiff;
+					domainStats[i].prevTimes[j] = vcpuTimeInSeconds;
 				}
 
 			}
 			
 		}
 
-		printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
-		double timeDiff = (vcpuTimeInSeconds - domainStats[i].prevTime);
-		printf("VCPU time diff on domain %d, %2f, interval %d\n", i, timeDiff, interval);
-		if (domainStats[i].prevTime != 0)
-		{
-			printf("Previous domain %d time is not zero.\n", i);
-			double usage = timeDiff/interval;
-			domainStats[i].usage = usage;
-			// domainStats[i].pinnedPcpu = j;
-			// pcpuUsage[j] += domainStats[i].usage;
-			// printf("Domain %d is pinned to cpu %d\n", i, j);
-		}
-		domainStats[i].prevTime = vcpuTimeInSeconds;
+		// printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
+		// double timeDiff = (vcpuTimeInSeconds - domainStats[i].prevTime);
+		// printf("VCPU time diff on domain %d, %2f, interval %d\n", i, timeDiff, interval);
+		// if (domainStats[i].prevTime != 0)
+		// {
+		// 	printf("Previous domain %d time is not zero.\n", i);
+		// 	double usage = timeDiff/interval;
+		// 	domainStats[i].usage = usage;
+		// 	// domainStats[i].pinnedPcpu = j;
+		// 	// pcpuUsage[j] += domainStats[i].usage;
+		// 	// printf("Domain %d is pinned to cpu %d\n", i, j);
+		// }
+		// domainStats[i].prevTime = vcpuTimeInSeconds;
 		
 
 		// for (int j = 0; j < nparams; j++)
@@ -188,11 +233,17 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		// 	}
 		// }
 
-		printf("pcpu: %d aos_vm_%d usage: %.2f\n", domainStats[i].pinnedPcpu, i + 1, domainStats[i].usage);
+		// printf("pcpu: %d aos_vm_%d usage: %.2f\n", domainStats[i].pinnedPcpu, i + 1, domainStats[i].usage);
 		
 
 		free(params);
 		free(cpuMap);
+	}
+
+	for (int i = 0; i < npcpus; i++) {
+		printf("CPU %d overall usage time in last cycle is %2f seconds\n", i, pcpuUsage[i]);
+		pcpuUsage[i] = pcpuUsage[i] / interval;
+		printf("CPU %d normalized usage is %2f\n", i, pcpuUsage[i]);
 	}
 
 	// double targetUsagePerPcpu = totalCpuUsage / npcpus;
