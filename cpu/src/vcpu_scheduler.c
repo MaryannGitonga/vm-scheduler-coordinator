@@ -17,8 +17,8 @@ typedef struct
 } DomainCPUStats;
 
 int DomainCPUStats_initialize_for_domain(DomainCPUStats *domainStats, int npcpus) {
-	stats->prevTimes = calloc(npcpus, sizeof(double));
-	if (stats->prevTimes == NULL) {
+	domainStats->prevTimes = calloc(npcpus, sizeof(double));
+	if (domainStats->prevTimes == NULL) {
 		return 0;
 	}
 
@@ -26,12 +26,12 @@ int DomainCPUStats_initialize_for_domain(DomainCPUStats *domainStats, int npcpus
 }
 
 void DomainCPUStats_deinitialize_for_domain(DomainCPUStats *domainStats) {
-	if (stats->prevTimes != NULL) {
-		free(stats->prevTimes);
+	if (domainStats->prevTimes != NULL) {
+		free(domainStats->prevTimes);
 	}
 }
 
-void DomainCPUStats_free(DomainCPUStats *stats) {
+void DomainCPUStats_free(DomainCPUStats *stats, int ndomains) {
 	for (int i = 0; i < ndomains; i++) {
 		DomainCputStats_deinitialize_for_domain(&stats[i]);
 	}
@@ -60,6 +60,7 @@ error:
 }
 
 DomainCPUStats *domainStats = NULL;
+int domains;
 
 
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
@@ -72,7 +73,7 @@ DO NOT CHANGE THE FOLLOWING FUNCTION
 void signal_callback_handler()
 {
 	printf("Caught Signal");
-	DomainCPUStats_free(domainStats);
+	DomainCPUStats_free(domainStats, ndomains);
 	is_exit = 1;
 }
 
@@ -119,7 +120,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 {
 	printf("Scheduler started...\n");
 	virDomainPtr *domains, domain;
-	int ndomains, result, nparams, npcpus;
+	int result, nparams, npcpus;
 	virTypedParameterPtr params;
 
 	// get all active running VMs
