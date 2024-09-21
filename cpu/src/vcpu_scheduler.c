@@ -37,6 +37,7 @@ double get_standard_deviation(double *values, int nvalues) {
 
 int are_cpus_balanced(double *cpuUsages, int ncpus) {
 	double stddev = get_standard_deviation(cpuUsages, ncpus);
+	printf("Standard dev: %2f\n", stddev);
 	return stddev <= 0.05;
 }
 
@@ -268,19 +269,21 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	}
 
 	int balanced = are_cpus_balanced(pcpuUsage, npcpus);
-	
+
+	printf("Balanced: %d\n", balanced);
+
 	if(balanced){
 		goto done;
 	}
 
-	// unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
-	// result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
-	// if (result < 0) {
-	// 	fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-	// 	free(params);
-	// 	free(cpuMap);
-	// 	continue;
-	// }
+	unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
+	result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
+	if (result < 0) {
+		fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
+		free(params);
+		free(cpuMap);
+		continue;
+	}
 
 
 	// double targetUsagePerPcpu = totalCpuUsage / npcpus;
@@ -337,7 +340,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// 	}
     //     free(newCpuMap);
     // }
-	// free(cpuMap);
+	free(cpuMap);
 done:
 	free(pcpuUsage);
 	free(domains);
