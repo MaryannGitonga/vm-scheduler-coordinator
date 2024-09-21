@@ -275,32 +275,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	printf("pcpus not balanced. Mean usage %2f, stddev %2f\n", meanUsage, stddevUsage);
 
-	// for (int i = 0; i < npcpus; i++)
-	// {
-	// 	if(meanUsage - pcpuUsage[i] > 0.1) {
-	// 		printf("PCPU %d is underutilized, usage is %2f, attempt to balance...\n", i, pcpuUsage[i]);
-	// 		// CPU usage is low compared to the mean
-	// 		// find CPU with most usage to donate workloads to the underutilized cpu
-	// 		int busiestCpu = get_max_item_index(pcpuUsage, npcpus);
-	// 		printf("PCPU %d is busiest\n", busiestCpu);
-	// 		for (int d = 0; d < ndomains; d++) {
-	// 			if (VIR_CPU_USED(&domainStats[d].cpumap, busiestCpu) && !VIR_CPU_USED(&domainStats[d].cpumap, i)) {
-	// 				unsigned char newCpuMap = 1 << i;
-	// 				result = virDomainPinVcpu(domains[d], 0, &newCpuMap, VIR_CPU_MAPLEN(npcpus));
-	// 				if (result < 0) {
-	// 					fprintf(stderr, "Failed to pin vcpus to domain %d\n", d);
-	// 					goto done;
-	// 				}
-
-	// 				printf("Moved domain %d from pcpu %d to pcpu %d\n", d, busiestCpu, i);
-	// 				break;
-	// 			}
-	// 		}
-
-	// 		break;
-	// 	}
-	// }
-
 	double *plannedUsage = calloc(npcpus, sizeof(double));
 	unsigned char *newCpuMappings = calloc(ndomains, sizeof(unsigned char));
 	// to balance the cpus we attempt to find new pin mappings from scratch
@@ -399,75 +373,18 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 	}
 
-	
-	
-
-	// unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
-	// result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
-	// if (result < 0) {
-	// 	fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-	// 	free(params);
-	// 	free(cpuMap);
-	// 	continue;
-	// }
-
-
-	// double targetUsagePerPcpu = totalCpuUsage / npcpus;
-	// printf("Total usage: %.2f\n", totalCpuUsage);
-	// printf("Target usage per pcpu: %.2f\n", targetUsagePerPcpu);
-
-	// int pcpusBalanced = 1;
-    // for (int i = 0; i < npcpus; i++) {
-	// 	printf("pcpu %d usage: %.2f\n", i, pcpuUsage[i]);
-    //     // if (fabs(pcpuUsage[i] - targetUsagePerPcpu) > 0.1) {
-    //     //     pcpusBalanced = 0;
-    //     //     break;
-    //     // }
-    // }
-
-    // if (pcpusBalanced) {
-    //     printf("pCPUs are balanced. No remapping required.\n");
-    //     free(pcpuUsage);
-    //     free(vcpuUsage);
-    //     free(domains);
-    //     return;
-    // }
-
-	// printf("pCPUs are not balanced. Remapping vCPUs...\n");
-
-	// for (int i = 0; i < ndomains; i++) {
-    //     domain = domains[i];
-	// 	int leastLoadedPcpu = -1;
-    //     unsigned char *newCpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
-	// 	unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
-	// 	result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
-	// 	if (result < 0) {
-	// 		fprintf(stderr, "Failed to get vcpu pinning info for domain %d\n", i);
-	// 		continue;
-	// 	}
-		
-    //     for (int j = 0; j < npcpus; j++) {
-    //         if (pcpuUsage[j] < 1 && !VIR_CPU_USED(cpuMap, j)) {
-	// 			double predictedLoad = pcpuUsage[j] + vcpuUsage[i];
-	// 			if (predictedLoad < 1)
-	// 			{
-	// 				leastLoadedPcpu = j;
-	// 				newCpuMap[j / 8] |= (1 << (j % 8));
-	// 			}
-    //         }
-    //     }
-
-	// 	if (leastLoadedPcpu != -1)
-	// 	{
-	// 		result = virDomainPinVcpu(domain, 0, newCpuMap, VIR_CPU_MAPLEN(npcpus));
-	// 		if (result < 0) {
-	// 			fprintf(stderr, "Failed to pin vcpus for domain %d\n", i);
-	// 		}
-	// 	}
-    //     free(newCpuMap);
-    // }
-	// free(cpuMap);
 done:
+	if (plannedUsage != NULL)
+	{
+		free(plannedUsage);
+	}
+	
+	if (newCpuMappings != NULL)
+	{
+		free(newCpuMappings);
+	}
+
+	free(domainUsage);
 	free(pcpuUsage);
 	free(domains);
 }
