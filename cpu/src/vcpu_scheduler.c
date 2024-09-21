@@ -195,6 +195,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
     }
 
 	double *pcpuUsage = calloc(npcpus, sizeof(double));
+	double *domainUsage = calloc(ndomains, sizeof(double));
 	if (domainStats == NULL)
 	{
 		domainStats = DomainCPUStats_create(ndomains, npcpus);
@@ -242,11 +243,15 @@ void CPUScheduler(virConnectPtr conn, int interval)
 					double timeDiff = vcpuTimeInSeconds - domainStats[i].prevTimes[j];
 					printf("Domain %d time diff on cpu %d %2f seconds\n", i, k, timeDiff);
 					pcpuUsage[j] += timeDiff;
+					domainUsage[i] += timeDiff;
+
 					domainStats[i].prevTimes[j] = vcpuTimeInSeconds;
 				}
 			}
 		}
 
+		domainUsage[i] = domainUsage[i]/interval;
+		printf("Domain %d overall usage is %2f\n", i, domainUsage[i]);
 		free(params);
 	}
 
@@ -274,31 +279,87 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	printf("pcpus not balanced. Mean usage %2f, stddev %2f\n", meanUsage, stddevUsage);
 
-	for (int i = 0; i < npcpus; i++)
-	{
-		if(meanUsage - pcpuUsage[i] > 0.1) {
-			printf("PCPU %d is underutilized, usage is %2f, attempt to balance...\n", i, pcpuUsage[i]);
-			// CPU usage is low compared to the mean
-			// find CPU with most usage to donate workloads to the underutilized cpu
-			int busiestCpu = get_max_item_index(pcpuUsage, npcpus);
-			printf("PCPU %d is busiest\n", busiestCpu);
+	// for (int i = 0; i < npcpus; i++)
+	// {
+	// 	if(meanUsage - pcpuUsage[i] > 0.1) {
+	// 		printf("PCPU %d is underutilized, usage is %2f, attempt to balance...\n", i, pcpuUsage[i]);
+	// 		// CPU usage is low compared to the mean
+	// 		// find CPU with most usage to donate workloads to the underutilized cpu
+	// 		int busiestCpu = get_max_item_index(pcpuUsage, npcpus);
+	// 		printf("PCPU %d is busiest\n", busiestCpu);
+	// 		for (int d = 0; d < ndomains; d++) {
+	// 			if (VIR_CPU_USED(&domainStats[d].cpumap, busiestCpu) && !VIR_CPU_USED(&domainStats[d].cpumap, i)) {
+	// 				unsigned char newCpuMap = 1 << i;
+	// 				result = virDomainPinVcpu(domains[d], 0, &newCpuMap, VIR_CPU_MAPLEN(npcpus));
+	// 				if (result < 0) {
+	// 					fprintf(stderr, "Failed to pin vcpus to domain %d\n", d);
+	// 					goto done;
+	// 				}
+
+	// 				printf("Moved domain %d from pcpu %d to pcpu %d\n", d, busiestCpu, i);
+	// 				break;
+	// 			}
+	// 		}
+
+	// 		break;
+	// 	}
+	// }
+
+	double *plannedUsage = calloc(npcpus, sizeof(double));
+	unsigned char *newCpuMappings = calloc(ndomains, sizeof(unsigned char));
+	// to balance the cpus we attempt to find new pin mappings from scratch
+	// such that workloads will be distributed evenly
+	// Any domain can be repinned to any PCPU. We use the mean usage
+	// as the target usage, and for each CPU, we find the domains that will
+	// get it to closest to the target usage
+	// for each pcpu, start with planned usage = 0
+	// find domain that will it get closer to the target, assign that to pcpu
+	// increase planned usage, repeat until planned usage = target usage
+	for (int c = 0; c < npcpus; c++) {
+		double remainingUsage = meanUsage - plannedUsage[c];
+		while (remainingUsage > 0) {
+			int bestDomain = -1;
 			for (int d = 0; d < ndomains; d++) {
-				if (VIR_CPU_USED(&domainStats[d].cpumap, busiestCpu) && !VIR_CPU_USED(&domainStats[d].cpumap, i)) {
-					unsigned char newCpuMap = 1 << i;
-					result = virDomainPinVcpu(domains[d], 0, &newCpuMap, VIR_CPU_MAPLEN(npcpus));
-					if (result < 0) {
-						fprintf(stderr, "Failed to pin vcpus to domain %d\n", d);
-						goto done;
+				// domain to assign must be free (not assigned to any pcpu)
+				// and usage must not be greater than the remaining target usage
+				if (newCpuMappings[d] == 0 && domainUsage[d] <= remainingUsage) {
+					// initializing the bestDomain inside this if-block
+					// ensures that the best domain always meets our constraints
+					if (bestDomain == -1) {
+						bestDomain = d;
+						continue;
 					}
 
-					printf("Moved domain %d from pcpu %d to pcpu %d\n", d, busiestCpu, i);
-					break;
+					// of all possible domains that meet our constraints
+					// prefer the one with the most usage
+					if (domainUsage[d] > domainUsage[bestDomain]) {
+						bestDomain = d;
+					}
 				}
 			}
 
-			break;
+			if (bestDomain > -1) {
+				newCpuMappings[bestDomain] = 1 << c;
+				remainingUsage -= domainUsage[bestDomain];
+				printf("Assigning domain %d with usage %2f to pcpu %d\n", bestDomain, domainUsage[bestDomain], c);
+			} else {
+				break;
+			}
 		}
 	}
+
+	printf("Assigning planned mappings to domains\n");
+	for (int d = 0; d < ndomains; d++) {
+		unsigned char domainCpuMap = newCpuMappings[d];
+		result = virDomainPinVcpu(domains[d], 0, &domainCpuMap, VIR_CPU_MAPLEN(npcpus));
+		if (result < 0) {
+			fprintf(stderr, "Failed to pin vcpus to domain %d\n", d);
+			goto done;
+		}
+
+		printf("New CPU mapping for domain %d %d\n", d, domainCpuMap);
+	}
+
 	
 	
 
