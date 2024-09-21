@@ -350,6 +350,12 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		unsigned char domainCpuMap = newCpuMappings[d];
 		printf("New CPU mapping for domain %d %d\n", d, domainCpuMap);
 
+		if (domainCpuMap == 0)
+		{
+			continue;
+		}
+		
+
 		result = virDomainPinVcpu(domains[d], 0, &domainCpuMap, VIR_CPU_MAPLEN(npcpus));
 		if (result < 0) {
 			fprintf(stderr, "Failed to pin vcpus to domain %d\n", d);
