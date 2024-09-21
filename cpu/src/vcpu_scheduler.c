@@ -311,40 +311,43 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	// for each pcpu, start with planned usage = 0
 	// find domain that will it get closer to the target, assign that to pcpu
 	// increase planned usage, repeat until planned usage = target usage
-	// for (int c = 0; c < npcpus; c++) {
-	// 	double remainingUsage = meanUsage - plannedUsage[c];
-	// 	while (remainingUsage > 0) {
-	// 		int bestDomain = -1;
-	// 		for (int d = 0; d < ndomains; d++) {
-	// 			// domain to assign must be free (not assigned to any pcpu)
-	// 			// and usage must not be greater than the remaining target usage
-	// 			if (newCpuMappings[d] == 0 && domainUsage[d] <= remainingUsage) {
-	// 				// initializing the bestDomain inside this if-block
-	// 				// ensures that the best domain always meets our constraints
-	// 				if (bestDomain == -1) {
-	// 					bestDomain = d;
-	// 					continue;
-	// 				}
+	for (int c = 0; c < npcpus; c++) {
+		double remainingUsage = meanUsage - plannedUsage[c];
+		while (remainingUsage > 0) {
+			int bestDomain = -1;
+			for (int d = 0; d < ndomains; d++) {
+				// domain to assign must be free (not assigned to any pcpu)
+				// and usage must not be greater than the remaining target usage
+				if (newCpuMappings[d] == 0 && domainUsage[d] <= remainingUsage) {
+					// initializing the bestDomain inside this if-block
+					// ensures that the best domain always meets our constraints
+					if (bestDomain == -1) {
+						bestDomain = d;
+						continue;
+					}
 
-	// 				// of all possible domains that meet our constraints
-	// 				// prefer the one with the most usage
-	// 				if (domainUsage[d] > domainUsage[bestDomain]) {
-	// 					bestDomain = d;
-	// 				}
-	// 			}
-	// 		}
+					// of all possible domains that meet our constraints
+					// prefer the one with the most usage
+					if (domainUsage[d] > domainUsage[bestDomain]) {
+						bestDomain = d;
+					}
+				}
+			}
 
-	// 		if (bestDomain > -1) {
-	// 			newCpuMappings[bestDomain] = 1 << c;
-	// 			remainingUsage -= domainUsage[bestDomain];
-	// 			printf("Assigning domain %d with usage %2f to pcpu %d\n", bestDomain, domainUsage[bestDomain], c);
-	// 		} else {
-	// 			break;
-	// 		}
-	// 	}
-	// }
+			if (bestDomain > -1) {
+				newCpuMappings[bestDomain] = 1 << c;
+				remainingUsage -= domainUsage[bestDomain];
+				printf("Assigning domain %d with usage %2f to pcpu %d\n", bestDomain, domainUsage[bestDomain], c);
+			} else {
+				break;
+			}
+		}
+	}
 
 	for (int d = 0; d < ndomains; d++) {
+		if (newCpuMappings[d] != 0) {
+			continue;
+		}
 		int bestCpu = 0;
 		for (int i = 1; i < npcpus; i++) {
 			if (plannedUsage[i] < plannedUsage[bestCpu]) {
