@@ -186,6 +186,8 @@ void CPUScheduler(virConnectPtr conn, int interval)
 					printf("Domain %d vcpu_time %lld on cpu  %d\n", i, params[p].value.ul, j);
 					double vcpuTimeInSeconds = params[p].value.ul / pow(10, 9);
 					printf("Here 1\n");
+					printf("DomainStats %d %p\n", i, domainStats);
+					printf("DomainStats %d %p %p\n", i, domainStats, &domainStats[i]);
 					printf("DomainStats %d %p\n", i, domainStats[i].prevTimes);
 					printf("DomainStats %d prev time at %d %2f\n", i, j, domainStats[i].prevTimes[j]);
 					double timeDiff = vcpuTimeInSeconds - domainStats[i].prevTimes[j];
