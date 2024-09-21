@@ -19,10 +19,10 @@ typedef struct
 int DomainCPUStats_initialize_for_domain(DomainCPUStats *domainStats, int npcpus) {
 	domainStats->prevTimes = calloc(npcpus, sizeof(double));
 	if (domainStats->prevTimes == NULL) {
-		return 0;
+		return -1;
 	}
 
-	return -1;
+	return 0;
 }
 
 void DomainCPUStats_deinitialize_for_domain(DomainCPUStats *domainStats) {
