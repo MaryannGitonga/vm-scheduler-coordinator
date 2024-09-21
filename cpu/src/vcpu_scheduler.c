@@ -27,7 +27,7 @@ double get_standard_deviation(double *values, int nvalues) {
 
 	double sumSquareDiffs = 0;
 	for (int i = 0; i < nvalues; i++) {
-		sumSquareDiffs += (values[i] - mean) * (values[i] - mean)
+		sumSquareDiffs += (values[i] - mean) * (values[i] - mean);
 	}
 
 	double meanSquareDiff = sumSquareDiffs / nvalues;
