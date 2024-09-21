@@ -33,20 +33,20 @@ void DomainCPUStats_deinitialize_for_domain(DomainCPUStats *domainStats) {
 
 void DomainCPUStats_free(DomainCPUStats *stats) {
 	for (int i = 0; i < ndomains; i++) {
-		DomainCputStats_deinitialize_for_domain(stats + i);
+		DomainCputStats_deinitialize_for_domain(&stats[i]);
 	}
 
 	free(stats);
 }
 
-DomainCpuStats* DomainCPUStats_create(int ndomains, int ncpus) {
-	DomainCpuStats *stats = calloc(ndomains, sizeof(DomainCPUStats));
+DomainCPUStats* DomainCPUStats_create(int ndomains, int ncpus) {
+	DomainCPUStats *stats = calloc(ndomains, sizeof(DomainCPUStats));
 	if (stats == NULL) {
 		return NULL;
 	}
 
 	for (int i = 0; i < ndomains; i++) {
-		if (DomainCPUStats_initialize_for_domain(stats + i, ncpus) == -1)
+		if (DomainCPUStats_initialize_for_domain(&stats[i], ncpus) == -1)
 		{
 			goto error;
 		}
