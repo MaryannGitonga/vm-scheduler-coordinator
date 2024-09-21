@@ -221,7 +221,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 		
 		unsigned char cpumap = 0;
-		result = virDomainGretVcpuPinInfo(domain, 1, &cpumap, 1, 0);
+		result = virDomainGetVcpuPinInfo(domain, 1, &cpumap, 1, 0);
 		if (result < 0) {
 			fprintf(stderr, "Failed to get cpumap for domain %d\n", i);
 			free(params);
@@ -283,9 +283,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			int busiestCpu = get_max_item_index(pcpuUsage, npcpus);
 			printf("PCPU %d is busiest\n", busiestCpu);
 			for (int d = 0; d < ndomains; d++) {
-				if (VIR_CPU_USED(domainStats[d].cpumap, busiestCpu) && !VIR_CPU_USED(domainStats[d].cpumap, i)) {
+				if (VIR_CPU_USED(&domainStats[d].cpumap, busiestCpu) && !VIR_CPU_USED(&domainStats[d].cpumap, i)) {
 					unsigned char newCpuMap = 1 << i;
-					result = virDomainPinVcpu(domains[d], 0, newCpuMap, VIR_CPU_MAPLEN(npcpus));
+					result = virDomainPinVcpu(domains[d], 0, &newCpuMap, VIR_CPU_MAPLEN(npcpus));
 					if (result < 0) {
 						fprintf(stderr, "Failed to pin vcpus to domain %d\n", d);
 						goto done;
