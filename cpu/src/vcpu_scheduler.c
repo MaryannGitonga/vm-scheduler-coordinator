@@ -40,14 +40,16 @@ void DomainCPUStats_free(DomainCPUStats *stats, int ndomains) {
 }
 
 DomainCPUStats* DomainCPUStats_create(int ndomains, int ncpus) {
+	printf("Attempting to create domain stats array\n");
 	DomainCPUStats *stats = calloc(ndomains, sizeof(DomainCPUStats));
 	if (stats == NULL) {
-		return NULL;
+		goto error;
 	}
 
 	for (int i = 0; i < ndomains; i++) {
 		if (DomainCPUStats_initialize_for_domain(&stats[i], ncpus) == -1)
 		{
+			printf("Failed to initialize prev times for domain %d\n", i);
 			goto error;
 		}
 	}
@@ -55,6 +57,7 @@ DomainCPUStats* DomainCPUStats_create(int ndomains, int ncpus) {
 	return stats;
 
 error:
+	printf("Failed to create domain stats\n");
 	DomainCPUStats_free(stats, ndomains);
 	return NULL;
 }
