@@ -13,10 +13,11 @@ typedef struct
 {
 	double usage;
 	double *prevTimes;
+	unsigned char cpumap;
 	int pinnedPcpu;
 } DomainCPUStats;
 
-double get_standard_deviation(double *values, int nvalues) {
+double get_standard_deviation(double *values, int nvalues, double *mean_out) {
 	// Calculate mean
 	double mean = 0;
 	for (int i = 0; i < nvalues; i++) {
@@ -24,6 +25,10 @@ double get_standard_deviation(double *values, int nvalues) {
 	}
 
 	mean = mean / nvalues;
+
+	if (mean_out != NULL) {
+		*mean_out = mean;
+	}
 
 	double sumSquareDiffs = 0;
 	for (int i = 0; i < nvalues; i++) {
@@ -35,9 +40,33 @@ double get_standard_deviation(double *values, int nvalues) {
 	return stdev;
 }
 
-int are_cpus_balanced(double *cpuUsages, int ncpus) {
-	double stddev = get_standard_deviation(cpuUsages, ncpus);
+int get_max_item_index(double *values, int nvalues) {
+	if (nvalues == 0) {
+		return -1;
+	}
+
+	if (nvalues == 1) {
+		return 0;
+	}
+
+	double maxValue = values[0];
+	int maxIndex = 0;
+	for (int i = 1; i < nvalues; i++) {
+		if (values[i] > maxValue) {
+			maxValue = values[i];
+			maxIndex = i;
+		}
+	}
+
+	return maxIndex;
+}
+
+int are_cpus_balanced(double *cpuUsages, int ncpus, double *mean_out, double *stddev_out) {
+	double stddev = get_standard_deviation(cpuUsages, ncpus, mean_out);
 	printf("Standard dev: %2f\n", stddev);
+	if (stddev_out != NULL) {
+		*stddev_out = stddev;
+	}
 	return stddev <= 0.05;
 }
 
@@ -175,8 +204,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < ndomains; i++) {
 		domain = domains[i];
 
-		// nvcpus = virDomainGetCPUStats(domain, NULL, 0, 0, 0, 0);
-
 		nparams = virDomainGetCPUStats(domain, NULL, 0, 0, 1, 0);
 		if (nparams < 0)
 		{
@@ -192,6 +219,16 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			free(params);
 			continue;
 		}
+		
+		unsigned char cpumap = 0;
+		result = virDomainGretVcpuPinInfo(domain, 1, &cpumap, 1, 0);
+		if (result < 0) {
+			fprintf(stderr, "Failed to get cpumap for domain %d\n", i);
+			free(params);
+			goto done;
+		}
+
+		domainStats[i].cpumap = cpumap;
 
 		for (int j = 0; j < npcpus; j++)
 		{
@@ -210,49 +247,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 		}
 
-		// printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
-		// double timeDiff = (vcpuTimeInSeconds - domainStats[i].prevTime);
-		// printf("VCPU time diff on domain %d, %2f, interval %d\n", i, timeDiff, interval);
-		// if (domainStats[i].prevTime != 0)
-		// {
-		// 	printf("Previous domain %d time is not zero.\n", i);
-		// 	double usage = timeDiff/interval;
-		// 	domainStats[i].usage = usage;
-		// 	// domainStats[i].pinnedPcpu = j;
-		// 	// pcpuUsage[j] += domainStats[i].usage;
-		// 	// printf("Domain %d is pinned to cpu %d\n", i, j);
-		// }
-		// domainStats[i].prevTime = vcpuTimeInSeconds;
-		
-
-		// for (int j = 0; j < nparams; j++)
-		// {
-		// 	printf("Domain %d has param %s\n", i, params[j].field);
-		// 	if (strcmp(params[j].field, "vcpu_time") == 0) {
-		// 		double vcpuTimeInSeconds = params[j].value.ul / pow(10, 9);
-				
-		// 		printf("Domain %d vcpu time current %2f prev time %2f\n", i, vcpuTimeInSeconds, domainStats[i].prevTime);
-		// 		if (domainStats[i].prevTime != 0)
-		// 		{
-		// 			printf("Previous domain %d time is not zero.\n", i);
-		// 			double usage = (vcpuTimeInSeconds - domainStats[i].prevTime)/interval;
-		// 			domainStats[i].usage = usage;
-		// 			for (int k = 0; k < npcpus; k++) {
-		// 				if (VIR_CPU_USED(cpuMap, k)) {
-		// 					domainStats[i].pinnedPcpu = k;
-		// 					pcpuUsage[k] += domainStats[i].usage;
-		// 					printf("Domain %d is pinned to cpu %d\n", i, k);
-		// 				}
-		// 			}
-		// 		}
-		// 		domainStats[i].prevTime = vcpuTimeInSeconds;
-		// 		break;
-		// 	}
-		// }
-
-		// printf("pcpu: %d aos_vm_%d usage: %.2f\n", domainStats[i].pinnedPcpu, i + 1, domainStats[i].usage);
-		
-
 		free(params);
 	}
 
@@ -268,13 +262,45 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		printf("CPU %d normalized usage is %2f\n", i, pcpuUsage[i]);
 	}
 
-	int balanced = are_cpus_balanced(pcpuUsage, npcpus);
+	double meanUsage = 0;
+	double stddevUsage = 0;
+	int balanced = are_cpus_balanced(pcpuUsage, npcpus, &meanUsage, &stddevUsage);
 
 	printf("Balanced: %d\n", balanced);
 
 	if(balanced){
 		goto done;
 	}
+
+	printf("pcpus not balanced. Mean usage %2f, stddev %2f\n", meanUsage, stddevUsage);
+
+	for (int i = 0; i < npcpus; i++)
+	{
+		if(meanUsage - pcpuUsage[i] > 0.1) {
+			printf("PCPU %d is underutilized, usage is %2f, attempt to balance...\n", i, pcpuUsage[i]);
+			// CPU usage is low compared to the mean
+			// find CPU with most usage to donate workloads to the underutilized cpu
+			int busiestCpu = get_max_item_index(pcpuUsage, npcpus);
+			printf("PCPU %d is busiest\n", busiestCpu);
+			for (int d = 0; d < ndomains; d++) {
+				if (VIR_CPU_USED(domainStats[d].cpumap, busiestCpu) && !VIR_CPU_USED(domainStats[d].cpumap, i)) {
+					unsigned char newCpuMap = 1 << i;
+					result = virDomainPinVcpu(domains[d], 0, newCpuMap, VIR_CPU_MAPLEN(npcpus));
+					if (result < 0) {
+						fprintf(stderr, "Failed to pin vcpus to domain %d\n", d);
+						goto done;
+					}
+
+					printf("Moved domain %d from pcpu %d to pcpu %d\n", d, busiestCpu, i);
+					break;
+				}
+			}
+
+			break;
+		}
+	}
+	
+	
 
 	// unsigned char *cpuMap = calloc(1, VIR_CPU_MAPLEN(npcpus));
 	// result = virDomainGetVcpuPinInfo(domain, 1, cpuMap, VIR_CPU_MAPLEN(npcpus), 0);
