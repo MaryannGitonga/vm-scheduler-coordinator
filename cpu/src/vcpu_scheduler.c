@@ -344,10 +344,31 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		}
 	}
 
-	for (int d = 0; d < ndomains; d++) {
-		if (newCpuMappings[d] != 0) {
-			continue;
+	printf("Second round to assign unassigned domains\n");
+	while (1) {
+		int busiestUnassignedDomain = -1;
+		for (int d = 0; d < ndomains; d++) {
+			if (newCpuMappings[d] != 0) {
+				continue;
+			}
+
+			if (busiestUnassignedDomain == -1) {
+				busiestUnassignedDomain = d;
+				continue;
+			}
+
+			if (domainUsage[d] > domainUsage[busiestUnassignedDomain]) {
+				busiestUnassignedDomain = d;
+			}
 		}
+
+		if (busiestUnassignedDomain == -1) {
+			break;
+		}
+
+		printf("Unassigned domain %d has the largest usage\n", busiestUnassignedDomain);
+
+		// assign domain with largest usage to pcpu with least usage
 		int bestCpu = 0;
 		for (int i = 1; i < npcpus; i++) {
 			if (plannedUsage[i] < plannedUsage[bestCpu]) {
@@ -355,8 +376,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 			}
 		}
 
-		newCpuMappings[d] = 1 << bestCpu;
-		plannedUsage[bestCpu] += domainUsage[d];
+		newCpuMappings[busiestUnassignedDomain] = 1 << bestCpu;
+		plannedUsage[bestCpu] += domainUsage[busiestUnassignedDomain];
+		printf("Assign domain %d with usage %2f to cpu %d\n", busiestUnassignedDomain, domainUsage[busiestUnassignedDomain], bestCpu);
 	}
 
 	printf("Assigning planned mappings to domains\n");
