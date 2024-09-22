@@ -298,7 +298,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			if (starvingVMs[i] && domainStats[i].readyToRelease)
 			{
 				// don't need this in the if statement: && (domainStats[i].actual > lowestVMMemory)?
-				double releasedMemory = (domainStats[i].actual - maxMemoryAllocatable) > lowestVMMemory ? MIN((domainStats[i].actual - maxMemoryAllocatable), maxMemoryAllocatable): (domainStats[i].actual - lowestVMMemory);
+				double releasedMemory = (domainStats[i].actual - 50) > lowestVMMemory ? MIN((domainStats[i].actual - 50), 50): (domainStats[i].actual - lowestVMMemory);
 				domainStats[i].actual = domainStats[i].actual - releasedMemory;
 
 				if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
