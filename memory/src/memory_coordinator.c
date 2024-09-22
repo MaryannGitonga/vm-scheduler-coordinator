@@ -297,29 +297,30 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			double lowestVMMemory = domainStats[i].maxLimit / 4;
 			if (starvingVMs[i] && domainStats[i].readyToRelease)
 			{
-				// don't need this in the if statement: && (domainStats[i].actual > lowestVMMemory)?
-				double releasedMemory = (domainStats[i].actual - 50) > lowestVMMemory ? MIN((domainStats[i].actual - 50), 50): (domainStats[i].actual - lowestVMMemory);
-				domainStats[i].actual = domainStats[i].actual - releasedMemory;
+				if (domainStats[i].actual > lowestVMMemory){
+					double releasedMemory = (domainStats[i].actual - 50) > lowestVMMemory ? MIN((domainStats[i].actual - 50), 50): (domainStats[i].actual - lowestVMMemory);
+					domainStats[i].actual = domainStats[i].actual - releasedMemory;
 
-				if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
-					fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
+					if(virDomainSetMemory(domains[i], domainStats[i].actual * 1024) != 0){
+						fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
+					}
+
+					domainStats[i].readyToRelease = (domainStats[i].actual == lowestVMMemory);
+					printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
 				}
+				else {
+					printf("Domain %d: starving %d: memory: %.2f: attained max: %d: lowest memory: %.2f MB\n", i, starvingVMs[i], domainStats[i].actual, domainStats[i].readyToRelease, lowestVMMemory);
+					if (nStarvingVMs > 1)
+					{
+						starvingVMs[i] = 0; // vm is no longer starving
+						nStarvingVMs -= 1;
+						continue;
+					}
 
-				domainStats[i].readyToRelease = (domainStats[i].actual == lowestVMMemory);
-				printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
-			}
-			else {
-				printf("Domain %d: starving %d: memory: %.2f: attained max: %d: lowest memory: %.2f MB\n", i, starvingVMs[i], domainStats[i].actual, domainStats[i].readyToRelease, lowestVMMemory);
-				if (nStarvingVMs > 1)
-				{
 					starvingVMs[i] = 0; // vm is no longer starving
 					nStarvingVMs -= 1;
-					continue;
+					break;
 				}
-
-				starvingVMs[i] = 0; // vm is no longer starving
-				nStarvingVMs -= 1;
-				break;
 			}
 		}
 		
