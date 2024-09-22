@@ -306,7 +306,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 						fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
 					}
 
-					domainStats[i].readyToRelease = (domainStats[i].actual == lowestVMMemory);
+					// change readyToRelease to 0 if actual memory is 512MB
+					domainStats[i].readyToRelease = (domainStats[i].actual != lowestVMMemory);
 					printf("Bloated domain %d now has memory of %.2f MB after releasing memory, ready to release %d\n", i, domainStats[i].actual, domainStats[i].readyToRelease);
 				}
 				else {
