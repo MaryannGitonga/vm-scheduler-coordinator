@@ -306,23 +306,25 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 						fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
 					}
 
+					printf("Bloated domain %d now has memory of %.2f MB after releasing memory, ready to release %d\n", i, domainStats[i].actual, domainStats[i].readyToRelease);
+
 					// change readyToRelease to 0 if actual memory is 512MB
 					domainStats[i].readyToRelease = (domainStats[i].actual != lowestVMMemory);
-					printf("Bloated domain %d now has memory of %.2f MB after releasing memory, ready to release %d\n", i, domainStats[i].actual, domainStats[i].readyToRelease);
-				}
-			} else 
-			{
-				printf("Domain %d: starving %d: memory: %.2f: attained max: %d: lowest memory: %.2f MB\n", i, starvingVMs[i], domainStats[i].actual, domainStats[i].readyToRelease, lowestVMMemory);
-				if (nStarvingVMs > 1)
-				{
-					starvingVMs[i] = 0; // vm is no longer starving
-					nStarvingVMs -= 1;
-					continue;
-				}
+					
+					if (!domainStats[i].readyToRelease)
+					{
+						if (nStarvingVMs > 1)
+						{
+							starvingVMs[i] = 0; // vm is no longer starving
+							nStarvingVMs -= 1;
+							continue;
+						}
 
-				starvingVMs[i] = 0; // vm is no longer starving
-				nStarvingVMs -= 1;
-				break;
+						starvingVMs[i] = 0; // vm is no longer starving
+						nStarvingVMs -= 1;
+						break;
+					}
+				}
 			}
 		}
 		
