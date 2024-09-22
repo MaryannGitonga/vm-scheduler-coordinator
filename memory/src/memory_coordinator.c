@@ -175,7 +175,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			if (isStarving){
 				printf("Domain %d is starving...\n", i);
 				double unusedDiff = domainStats[i].prevUnused - domainStats[i].unused;
-				maxMemoryAllocatable = MIN(maxMemoryAllocatable, unusedDiff) // dynamically allocate memory based on difference in prev unused and curr unused?
+				maxMemoryAllocatable = MIN(maxMemoryAllocatable, unusedDiff); // dynamically allocate memory based on difference in prev unused and curr unused?
 				starvingVMs[i] = 1;
 				nStarvingVMs += 1;
 			}
