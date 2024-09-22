@@ -45,7 +45,7 @@ The policy consists of the following steps:
 - When a starving VM has reached its maximum memory limit:
    - Memory is reclaimed back to its initial memory allocated.
 
-## Function workflow
+### Function workflow
 
 1. **Collect running VMs**: 
    - The coordinator gathers all active VMs.
@@ -61,5 +61,5 @@ The policy consists of the following steps:
 6. **Memory reclamation**:
    - When starving VMs reach their maximum memory limit, memory is gradually reclaimed to ensure they don't hold more memory than required.
 
-## Limitations
+### Limitations
 - The policy uses predefined thresholds (e.g., spike of 200MB or more to conclude that a program in a starving VM is terminated) that may need tuning based on specific VM workloads and host configurations.

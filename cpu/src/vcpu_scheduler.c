@@ -17,8 +17,8 @@ typedef struct
 	int pinnedPcpu;
 } DomainCPUStats;
 
-double get_standard_deviation(double *values, int nvalues, double *mean_out) {
-	// Calculate mean
+double getStdDev(double *values, int nvalues, double *meanOut) {
+	// calculate mean
 	double mean = 0;
 	for (int i = 0; i < nvalues; i++) {
 		mean += values[i];
@@ -26,8 +26,8 @@ double get_standard_deviation(double *values, int nvalues, double *mean_out) {
 
 	mean = mean / nvalues;
 
-	if (mean_out != NULL) {
-		*mean_out = mean;
+	if (meanOut != NULL) {
+		*meanOut = mean;
 	}
 
 	double sumSquareDiffs = 0;
@@ -40,37 +40,16 @@ double get_standard_deviation(double *values, int nvalues, double *mean_out) {
 	return stdev;
 }
 
-int get_max_item_index(double *values, int nvalues) {
-	if (nvalues == 0) {
-		return -1;
+int areCpusBalanced(double *cpuUsages, int ncpus, double *meanOut, double *stdDevOut) {
+	double stdDev = getStdDev(cpuUsages, ncpus, meanOut);
+	printf("Standard dev: %2f\n", stdDev);
+	if (stdDevOut != NULL) {
+		*stdDevOut = stdDev;
 	}
-
-	if (nvalues == 1) {
-		return 0;
-	}
-
-	double maxValue = values[0];
-	int maxIndex = 0;
-	for (int i = 1; i < nvalues; i++) {
-		if (values[i] > maxValue) {
-			maxValue = values[i];
-			maxIndex = i;
-		}
-	}
-
-	return maxIndex;
+	return stdDev <= 0.05;
 }
 
-int are_cpus_balanced(double *cpuUsages, int ncpus, double *mean_out, double *stddev_out) {
-	double stddev = get_standard_deviation(cpuUsages, ncpus, mean_out);
-	printf("Standard dev: %2f\n", stddev);
-	if (stddev_out != NULL) {
-		*stddev_out = stddev;
-	}
-	return stddev <= 0.05;
-}
-
-int DomainCPUStats_initialize_for_domain(DomainCPUStats *domainStats, int npcpus) {
+int DomainCPUStats_initializeForDomain(DomainCPUStats *domainStats, int npcpus) {
 	domainStats->prevTimes = calloc(npcpus, sizeof(double));
 	if (domainStats->prevTimes == NULL) {
 		return -1;
@@ -79,7 +58,7 @@ int DomainCPUStats_initialize_for_domain(DomainCPUStats *domainStats, int npcpus
 	return 0;
 }
 
-void DomainCPUStats_deinitialize_for_domain(DomainCPUStats *domainStats) {
+void DomainCPUStats_deinitializeForDomain(DomainCPUStats *domainStats) {
 	if (domainStats->prevTimes != NULL) {
 		free(domainStats->prevTimes);
 	}
@@ -87,7 +66,7 @@ void DomainCPUStats_deinitialize_for_domain(DomainCPUStats *domainStats) {
 
 void DomainCPUStats_free(DomainCPUStats *stats, int ndomains) {
 	for (int i = 0; i < ndomains; i++) {
-		DomainCPUStats_deinitialize_for_domain(&stats[i]);
+		DomainCPUStats_deinitializeForDomain(&stats[i]);
 	}
 
 	free(stats);
@@ -96,27 +75,26 @@ void DomainCPUStats_free(DomainCPUStats *stats, int ndomains) {
 DomainCPUStats* DomainCPUStats_create(int ndomains, int ncpus) {
 	DomainCPUStats *stats = calloc(ndomains, sizeof(DomainCPUStats));
 	if (stats == NULL) {
-		goto error;
+		printf("Failed to create domain stats\n");
+		DomainCPUStats_free(stats, ndomains);
+		return NULL;
 	}
 
 	for (int i = 0; i < ndomains; i++) {
-		if (DomainCPUStats_initialize_for_domain(&stats[i], ncpus) == -1)
+		if (DomainCPUStats_initializeForDomain(&stats[i], ncpus) == -1)
 		{
-			goto error;
+			printf("Failed to create domain stats\n");
+			DomainCPUStats_free(stats, ndomains);
+			return NULL;
 		}
 	}
 
 	return stats;
-
-error:
-	printf("Failed to create domain stats\n");
-	DomainCPUStats_free(stats, ndomains);
-	return NULL;
 }
 
 DomainCPUStats *domainStats = NULL;
 int ndomains;
-int first_iteration = 1;
+int firstIteration = 1;
 
 
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
@@ -258,9 +236,9 @@ void CPUScheduler(virConnectPtr conn, int interval)
 		free(params);
 	}
 
-	if (first_iteration) {
+	if (firstIteration) {
 		printf("First iteration, skip balancing...");
-		first_iteration = 0;
+		firstIteration = 0;
 		goto done;
 	}
 
@@ -271,7 +249,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	double meanUsage = 0;
 	double stddevUsage = 0;
-	int balanced = are_cpus_balanced(pcpuUsage, npcpus, &meanUsage, &stddevUsage);
+	int balanced = areCpusBalanced(pcpuUsage, npcpus, &meanUsage, &stddevUsage);
 
 	printf("Balanced: %d\n", balanced);
 
@@ -283,14 +261,6 @@ void CPUScheduler(virConnectPtr conn, int interval)
 
 	plannedUsage = calloc(npcpus, sizeof(double));
 	newCpuMappings = calloc(ndomains, sizeof(unsigned char));
-	// to balance the cpus we attempt to find new pin mappings from scratch
-	// such that workloads will be distributed evenly
-	// Any domain can be repinned to any PCPU. We use the mean usage
-	// as the target usage, and for each CPU, we find the domains that will
-	// get it to closest to the target usage
-	// for each pcpu, start with planned usage = 0
-	// find domain that will it get closer to the target, assign that to pcpu
-	// increase planned usage, repeat until planned usage = target usage
 	for (int c = 0; c < npcpus; c++) {
 		double remainingUsage = meanUsage - plannedUsage[c];
 		while (remainingUsage > 0) {
