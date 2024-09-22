@@ -180,7 +180,6 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			int isStarving = (unusedReducing && !domainStats[i].readyToRelease && (domainStats[i].actual >= domainStats[i].maxLimit/4));
 			if (isStarving){
 				printf("Domain %d is starving...\n", i);
-				double unusedDiff = domainStats[i].prevUnused - domainStats[i].unused;
 				starvingVMs[i] = 1;
 				nStarvingVMs += 1;
 			}
@@ -205,6 +204,16 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	for (int i = 0; i < ndomains; i++)
 	{
+
+		for (int s = 0; s < nStarvingVMs; s++)
+		{
+			double unusedDiff = domainStats[i].prevUnused - domainStats[i].unused;
+			// only allocate starving vm memory it requires to get to threshold
+			domainStats[s].memoryToAllocate = MIN(50.0, unusedDiff);
+			domainStats[s].memoryToAllocate = MAX(unusedThreshold - domainStats[s].unused, domainStats[s].memoryToAllocate) * 3;
+			printf("Memory allocatable for starving domain %d...%2f\n", i, domainStats[s].memoryToAllocate);
+		}
+
 		// if porgram is terminated, the unused memory increases
 		double unusedDiff = domainStats[i].unused - domainStats[i].prevUnused;
 		int programTerminated = domainStats[i].prevUnused > 0.0 && unusedDiff > domainStats[i].prevMemoryToAllocate;
@@ -222,14 +231,6 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			printf("Re-allocating memory.....\n");
 			int sacrificedVM = -1;
 			double releasedMemory = 0;
-
-			for (int s = 0; s < starvingVMs; s++)
-			{
-				// only allocate starving vm memory it requires to get to threshold
-				domainStats[s].memoryToAllocate = MIN(50.0, unusedDiff);
-				domainStats[s].memoryToAllocate = MAX(unusedThreshold - domainStats[s].unused, domainStats[s].memoryToAllocate) * 3;
-				printf("Memory allocatable for starving domain %d...%2f\n", i, domainStats[s].memoryToAllocate);
-			}
 			
 
 			// if not all vms are starving, sacrifice idle vms
