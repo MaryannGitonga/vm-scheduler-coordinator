@@ -210,15 +210,12 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	for (int i = 0; i < ndomains; i++)
 	{
-		if (domainStats[i].prevUnused > 0)
+		// if porgram is terminated, the unused memory increases
+		int programTerminated = domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused) > domainStats[i].prevMemoryToAllocate * 2;
+		if (starvingVMs[i] && programTerminated)
 		{
-			// if porgram is terminated, the unused memory increases
-			int programTerminated = domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused) > domainStats[i].prevMemoryToAllocate;
-			if (starvingVMs[i] && programTerminated)
-			{
-				domainStats[i].readyToRelease = 1;
-				printf("Program in domain %d terminated: %d\n", i, domainStats[i].readyToRelease);
-			}
+			domainStats[i].readyToRelease = 1;
+			printf("Program in domain %d terminated: %d\n", i, domainStats[i].readyToRelease);
 		}
 		
 		// int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 10.0));
@@ -310,10 +307,10 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 						fprintf(stderr, "Failed to set actual memory of %.2f MB to the bloated domain %d\n", domainStats[i].actual, i);
 					}
 
-					printf("Bloated domain %d now has memory of %.2f MB after releasing memory, ready to release %d\n", i, domainStats[i].actual, domainStats[i].readyToRelease);
-
 					// change readyToRelease to 0 if actual memory is 512MB
 					domainStats[i].readyToRelease = (domainStats[i].actual != lowestVMMemory);
+
+					printf("Bloated domain %d now has memory of %.2f MB after releasing memory, ready to release %d\n", i, domainStats[i].actual, domainStats[i].readyToRelease);
 					
 					if (!domainStats[i].readyToRelease)
 					{
