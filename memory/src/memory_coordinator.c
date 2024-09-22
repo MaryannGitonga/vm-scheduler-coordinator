@@ -17,6 +17,8 @@ typedef struct {
 	double prevUnused;
     double maxLimit;
 	int readyToRelease;
+	double memoryAllocated;
+	double prevMemoryAllocated;
 } DomainMemoryStats;
 
 DomainMemoryStats *domainStats = NULL;
@@ -88,7 +90,6 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	virDomainPtr *domains, domain;
 	int ndomains;
 	unsigned long long hostFreeMemory;
-	double maxMemoryAllocatable = 50.0;
 
 	// get all active running VMs
 	ndomains = virConnectListAllDomains(conn, &domains, VIR_CONNECT_LIST_DOMAINS_RUNNING);
@@ -155,10 +156,12 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
+		domainStats[i].prevMemoryAllocated = domainStats[i].memoryAllocated;
 
 		printf("Memory (VM %d) Actual: [%.2f MB], PrevActual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].prevActual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit);
 		
 	}
+	
 
 	// get starving domains -> marked as starving from prev iter.
 	if (nStarvingVMs == 0)
@@ -178,9 +181,9 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				double unusedDiff = domainStats[i].prevUnused - domainStats[i].unused;
 				
 				// only allocate starving vm memory it requires to get to threshold
-				maxMemoryAllocatable = MIN(maxMemoryAllocatable, unusedDiff);
-				maxMemoryAllocatable = MIN(unusedThreshold - domainStats[i].unused, maxMemoryAllocatable);
-				printf("Memory allocatable for starving domain %d...%2f", i, maxMemoryAllocatable);
+				domainStats[i].memoryAllocated = MIN(50.0, unusedDiff);
+				domainStats[i].memoryAllocated = MIN(unusedThreshold - domainStats[i].unused, domainStats[i].memoryAllocated);
+				printf("Memory allocatable for starving domain %d...%2f", i, domainStats[i].memoryAllocated);
 				starvingVMs[i] = 1;
 				nStarvingVMs += 1;
 			}
@@ -206,11 +209,11 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	for (int i = 0; i < ndomains; i++)
 	{
 		// if porgram is terminated, the unused memory increases
-		int programTerminated = (domainStats[i].unused - domainStats[i].prevUnused) > 0 && domainStats[i].unused > 150.0;
+		int programTerminated = domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused) > 0 && domainStats[i].maxMemoryAllocatable == 0;
 		if (starvingVMs[i] && programTerminated)
 		{
 			domainStats[i].readyToRelease = 1;
-			printf("Program in vm terminated: %d\n", domainStats[i].readyToRelease);
+			printf("Program in domain %d terminated: %d\n", i, domainStats[i].readyToRelease);
 		}
 		
 		// int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 10.0));
