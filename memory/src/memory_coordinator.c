@@ -210,12 +210,15 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	for (int i = 0; i < ndomains; i++)
 	{
-		// if porgram is terminated, the unused memory increases
-		int programTerminated = domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused) > domainStats[i].prevMemoryToAllocate;
-		if (starvingVMs[i] && programTerminated)
+		if (domainStats[i].prevUnused > 0)
 		{
-			domainStats[i].readyToRelease = 1;
-			printf("Program in domain %d terminated: %d\n", i, domainStats[i].readyToRelease);
+			// if porgram is terminated, the unused memory increases
+			int programTerminated = domainStats[i].prevUnused > 0.0 && (domainStats[i].unused - domainStats[i].prevUnused) > domainStats[i].prevMemoryToAllocate;
+			if (starvingVMs[i] && programTerminated)
+			{
+				domainStats[i].readyToRelease = 1;
+				printf("Program in domain %d terminated: %d\n", i, domainStats[i].readyToRelease);
+			}
 		}
 		
 		// int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 10.0));
