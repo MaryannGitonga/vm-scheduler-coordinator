@@ -18,7 +18,6 @@ typedef struct {
     double maxLimit;
 	int readyToRelease;
 	double memoryToAllocate;
-	double prevMemoryToAllocate;
 	int prevStarving;
 } DomainMemoryStats;
 
@@ -157,9 +156,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
-		domainStats[i].prevMemoryToAllocate = domainStats[i].memoryToAllocate;
 
-		printf("Memory (VM %d) Actual: [%.2f MB], PrevActual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB] PrevAllocated: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].prevActual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit, domainStats[i].prevMemoryToAllocate);
+		printf("Memory (VM %d) Actual: [%.2f MB], PrevActual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].prevActual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit);
 		
 	}
 	
@@ -208,7 +206,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		{
 			domainStats[i].readyToRelease = 1;
 			printf("Program in domain %d terminated: %d\n", i, domainStats[i].readyToRelease);
-			printf("Unused Diff: %2f PrevAllocated: %2f\n", unusedDiff, domainStats[i].prevMemoryToAllocate);
+			printf("Unused Diff: %2f\n", unusedDiff);
 		}
 		
 		// int unusedMemoryReduced = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 10.0));
