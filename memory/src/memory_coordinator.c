@@ -25,7 +25,7 @@ DomainMemoryStats *domainStats = NULL;
 int *starvingVMs = NULL;
 int nStarvingVMs = 0;
 double lowerBoundMemory = 200.0;
-double unusedThreshold = 150.0;
+double unusedThreshold = 100.0;
 
 void cleanUp() {
 	free(domainStats);
@@ -275,11 +275,11 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					}
 
 					domainStats[i].readyToRelease = (domainStats[i].actual == domainStats[i].maxLimit);
-					printf("Starving domain %d now has memory of %.2f MB from the host... attained max: %d\n", i, domainStats[i].actual, domainStats[i].readyToRelease);
+					printf("Starving domain %d now has memory of %.2f MB from the host...\n", i, domainStats[i].actual);
 				} else {
 					// if host can no longer give memory, reclaim memory from starving vms
 					domainStats[i].readyToRelease = 1;
-					printf("Host has no more memory to give... attained max: %d\n", domainStats[i].readyToRelease);
+					printf("Host has no more memory to give...\n");
 				}
 			}
 
@@ -306,7 +306,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					}
 
 					domainStats[i].readyToRelease = (domainStats[i].actual == lowestVMMemory);
-					printf("Bloated domain %d now has memory of %.2f MB after releasing memory.\n", i, domainStats[i].actual);
+					printf("Bloated domain %d now has memory of %.2f MB after releasing memory, ready to release %d\n", i, domainStats[i].actual, domainStats[i].readyToRelease);
 				}
 				else {
 					printf("Domain %d: starving %d: memory: %.2f: attained max: %d: lowest memory: %.2f MB\n", i, starvingVMs[i], domainStats[i].actual, domainStats[i].readyToRelease, lowestVMMemory);
