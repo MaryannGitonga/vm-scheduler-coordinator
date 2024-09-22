@@ -229,8 +229,6 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					{ 
 						if (domainStats[j].unused >= 100 && domainStats[j].actual > lowerBoundMemory)
 						{
-							printf("1... %2f 2....%2f\n", domainStats[j].actual - lowerBoundMemory, domainStats[i].memoryToAllocate);
-							printf("1... %2f 2....%2f\n", releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
 							releasedMemory = MIN((domainStats[j].actual - lowerBoundMemory), domainStats[i].memoryToAllocate);
 							releasedMemory = MIN(releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
 

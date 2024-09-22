@@ -16,54 +16,50 @@ The policy consists of the following steps:
 - These values are stored globally and are used to track changes in every coordinator call per interval.
 
 2. **Identify starving VMs**:
-- There is an array that keeps track of starving VMs across the cycles. The number of the starving VMs is also tracked separately for ease in implemntation.
+- There is an array that keeps track of starving VMs across the cycles. The number of the starving VMs is also tracked separately for ease in implementation.
 - A VM is marked as "starving" if:
     - Its previous unused memory is greater than zero.
-    - The decrease (`previous_unused - current_unused`) in unused memory is significant (more than 10 MB).
-    - Its actual memory usage is not less than a VM's initial memory (if it's less, the assumption is that it was previously sacrificed).
+    - Its unused memory is below the threshold (100MB).
+    - There is a decrease (`previous_unused - current_unused`) in unused memory.
+    - Its actual memory usage is more than a VM's initial memory (if it's less, the assumption is that it was previously sacrificed).
 
 3. **Memory reallocation process**:
 - For each starving VM:
     1. **Identify a sacrificial VM**:
-    - If not all VMs are starving (test case 2), attempt to find a "sacrificial" VM to release memory. 
     - A VM can be sacrificed if it has:
         - Unused memory of at least 100 MB.
         - Actual memory greater than 200 MB.
-    - Release memory from the sacrificial VM, ensuring it doesn't drop below 200 MB. At most 104MB of memory is released at a go.
+    - To decide how much memory to release and give to the starving VM:
+      - The coordinator only takes memory from the sacrificed VM if the VM has more than a minimum threshold (lowerBoundMemory). The amount taken is the lesser of the memory above that threshold or the amount the starving VM needs.
+      - The memory given to the starving VM is capped by how much more it can take without exceeding its maximum memory limit.
     2. **Allocate memory from the host**:
-    - If no VM can be sacrificed and the host has sufficient free memory (more than 200 MB), allocate memory from the host. At most 104MB of memory is released at a go.
+    - If no VM can be sacrificed and the host has sufficient free memory (more than 200 MB), allocate memory from the host.
+    - The same algorithm applied in sacrificed VMs is used to decide on how much memory to release from the host.
     3. **Final attempt**:
-    - If neither sacrificing a VM nor allocating from the host is possible, the starving VM is marked as having "attained max", indicating that it has attained maximum possible memory and cannot receive additional memory.
+    - If neither sacrificing a VM nor allocating from the host is possible, the starving VM is marked as "readyToRelease", indicating that it has attained maximum possible memory and cannot receive additional memory.
 
 4. **Memory reclamation**:
-   - When a starving VM has reached its maximum memory limit:
-     - Memory is reclaimed back to its initial memory allocated.
-
-### Summary
-- If a VM's unused memory is rapidly decreasing while it's using all of its actual memory, it will be marked as "starving."
-- Memory is then reallocated to this VM from other VMs (that are not starving) or from the host's free memory if available.
-- If no memory can be allocated, the VM is marked as having "attained max," preventing further attempts to allocate memory to it until its state changes.
-- This policy ensures efficient use of memory across all VMs while preventing any single VM (or host) from being deprived of the necessary memory resources.
+- A VM is marked as "bloated"/ with a "readyToRelease" designator if:
+    - Its unused memory had a spike (more then 200MB increase) indicating that the program that was running on it is terminated.
+    - Its actual memory is at maximum limit (2048MB).
+- When a starving VM has reached its maximum memory limit:
+   - Memory is reclaimed back to its initial memory allocated.
 
 ## Function workflow
 
-1. **Collect Running VMs**: 
-   - The scheduler gathers all active VMs and sets memory statistics collection intervals.
-2. **Memory Stats Gathering**: 
-   - For each VM, collect memory usage statistics and update the internal memory tracking data structures.
-3. **Identify and Mark Starving VMs**: 
+1. **Collect running VMs**: 
+   - The coordinator gathers all active VMs.
+2. **Gather memory stats**: 
+   - The coordinator collects each domain's memory usage stats and updates their structs for memory tracking.
+3. **Identify starving VMs**: 
    - Identify VMs that are starving based on changes in their unused memory and current actual memory usage.
-4. **Reallocate Memory**:
+4. **Identify starving VMs with terminated programs**: 
+   - Identify starving VMs with terminated programs based on if there's spike in their unused memory.
+5. **Reallocate memory**:
    - Attempt to release memory from non-starving VMs and allocate it to starving VMs.
    - If no VMs can be sacrificed, allocate memory from the host's free memory.
-5. **Memory Reclamation**:
+6. **Memory reclamation**:
    - When starving VMs reach their maximum memory limit, memory is gradually reclaimed to ensure they don't hold more memory than required.
-6. **Print and Log Status**:
-   - Print memory statuses, actions taken (e.g., reallocations), and the current number of starving VMs for monitoring.
-
-## Edge cases
-- **All VMs Starving**: If all VMs are marked as starving, the scheduler focuses on using the host's free memory first before indicating that no more memory can be allocated.
-- **Insufficient Host Memory**: If the host does not have enough free memory, the scheduler attempts to reclaim memory from the starving VMs themselves.
 
 ## Limitations
-- The policy uses predefined thresholds (e.g., 10MB decrease to conclude that a VM is "starving") that may need tuning based on specific VM workloads and host configurations.
+- The policy uses predefined thresholds (e.g., spike of 200MB or more to conclude that a program in a starving VM is terminated) that may need tuning based on specific VM workloads and host configurations.
