@@ -185,19 +185,6 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 			}
 		}
 	}
-	// else if (nStarvingVMs != ndomains)
-	// {
-	// 	// if all vms are not starving, there could be a dynamic change in number of starving/non-starving vms
-	// 	for (int i = 0; i < ndomains; i++)
-	// 	{
-	// 		int isStarving = (domainStats[i].prevUnused > 0.0 && (domainStats[i].prevUnused - domainStats[i].unused > 10.0) && (domainStats[i].actual >= domainStats[i].maxLimit/4));
-	// 		if (isStarving && !starvingVMs[i]){
-	// 			// if vm is starving and wasn't initially marked as starving
-	// 			starvingVMs[i] = 1;
-	// 			nStarvingVMs += 1;
-	// 		}
-	// 	}
-	// }
 	
 
 	printf("Number of starving VMS....%d\n", nStarvingVMs);
@@ -216,7 +203,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 		// if porgram is terminated, the unused memory increases
 		double unusedDiff = domainStats[i].unused - domainStats[i].prevUnused;
-		int programTerminated = domainStats[i].prevUnused > 0.0 && unusedDiff > 200.0;
+		int programTerminated = domainStats[i].prevUnused > 0.0 && unusedDiff > domainStats[i].prevMemoryToAllocate;
 		if (starvingVMs[i] && programTerminated)
 		{
 			domainStats[i].readyToRelease = 1;
