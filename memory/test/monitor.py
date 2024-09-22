@@ -23,7 +23,7 @@ def run(sc,vmobjlist,machineParseable, iterations, test):
         os.system('python3 {0}'.format(test))
     iterations += 1
     i = 0
-    print_line(70, iterations)
+    print_line(60, iterations)
     for vm in vmobjlist:
         stats = vm.memoryStats()
         if machineParseable:
@@ -39,7 +39,7 @@ def run(sc,vmobjlist,machineParseable, iterations, test):
 
         i+=1
 
-    if iterations == 70:
+    if iterations == 60:
         return
     sc.enter(2, 1, run, (sc,vmobjlist,machineParseable,iterations, test))
 
