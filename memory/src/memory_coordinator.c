@@ -176,7 +176,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		{
 			// if vm has unused that's decreasing and is less than or equal to 150MB (about to be exhausted)
 			int unusedReducing = domainStats[i].prevUnused > 0.0 && domainStats[i].unused < unusedThreshold && (domainStats[i].prevUnused - domainStats[i].unused > 10.0);
-			int isStarving = (unusedReducing && domainStats[i].readyToRelease && (domainStats[i].actual >= domainStats[i].maxLimit/4));
+			int isStarving = (unusedReducing && !domainStats[i].readyToRelease && (domainStats[i].actual >= domainStats[i].maxLimit/4));
 			if (isStarving){
 				printf("Domain %d is starving...\n", i);
 				double unusedDiff = domainStats[i].prevUnused - domainStats[i].unused;
