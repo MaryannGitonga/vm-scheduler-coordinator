@@ -209,8 +209,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		{
 			double unusedDiff = domainStats[i].prevUnused - domainStats[i].unused;
 			// only allocate starving vm memory it requires to get to threshold
-			domainStats[s].memoryToAllocate = MIN(50.0, unusedDiff);
-			domainStats[s].memoryToAllocate = MAX(unusedThreshold - domainStats[s].unused, domainStats[s].memoryToAllocate) * 3;
+			domainStats[s].memoryToAllocate = MIN(50.0, unusedThreshold - domainStats[s].unused);
+			domainStats[s].memoryToAllocate = MAX(unusedDiff, domainStats[s].memoryToAllocate) * 2;
 			printf("Memory allocatable for starving domain %d...%2f\n", i, domainStats[s].memoryToAllocate);
 		}
 
@@ -244,8 +244,8 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					{ 
 						if (domainStats[j].unused >= 100 && domainStats[j].actual > lowerBoundMemory)
 						{
-							printf("1... %2f 2....%2f", domainStats[j].actual - lowerBoundMemory, domainStats[i].memoryToAllocate);
-							printf("1... %2f 2....%2f", releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
+							printf("1... %2f 2....%2f\n", domainStats[j].actual - lowerBoundMemory, domainStats[i].memoryToAllocate);
+							printf("1... %2f 2....%2f\n", releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
 							releasedMemory = MIN((domainStats[j].actual - lowerBoundMemory), domainStats[i].memoryToAllocate);
 							releasedMemory = MIN(releasedMemory, domainStats[i].maxLimit - domainStats[i].actual);
 
