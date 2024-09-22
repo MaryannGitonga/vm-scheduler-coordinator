@@ -157,7 +157,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
-		domainStats[i].prevMemoryToAllocate = domainStats[i].memoryToAllocate != 0;
+		domainStats[i].prevMemoryToAllocate = domainStats[i].memoryToAllocate;
 
 		printf("Memory (VM %d) Actual: [%.2f MB], PrevActual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB] PrevAllocated: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].prevActual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit, domainStats[i].prevMemoryToAllocate);
 		
@@ -212,7 +212,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 	{
 		// if porgram is terminated, the unused memory increases
 		double unusedDiff = domainStats[i].unused - domainStats[i].prevUnused;
-		int programTerminated = domainStats[i].prevUnused > 0.0 && unusedDiff > domainStats[i].prevMemoryToAllocate * 2;
+		int programTerminated = domainStats[i].prevUnused > 0.0 && unusedDiff > domainStats[i].prevMemoryToAllocate;
 		if (starvingVMs[i] && programTerminated)
 		{
 			domainStats[i].readyToRelease = 1;
