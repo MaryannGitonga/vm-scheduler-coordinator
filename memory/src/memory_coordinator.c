@@ -207,7 +207,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 		for (int s = 0; s < nStarvingVMs; s++)
 		{
-			double unusedDiff = domainStats[i].prevUnused - domainStats[i].unused > 0 : domainStats[i].prevUnused - domainStats[i].unused : 0;
+			double unusedDiff = domainStats[i].prevUnused - domainStats[i].unused > 0 ? domainStats[i].prevUnused - domainStats[i].unused : 0;
 			// only allocate starving vm memory it requires to get to threshold
 			domainStats[s].memoryToAllocate = MIN(50.0, unusedThreshold - domainStats[s].unused);
 			domainStats[s].memoryToAllocate = MAX(unusedDiff, domainStats[s].memoryToAllocate) * 2;
