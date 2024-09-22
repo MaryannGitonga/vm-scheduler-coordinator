@@ -203,7 +203,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 		// if porgram is terminated, the unused memory increases
 		double unusedDiff = domainStats[i].unused - domainStats[i].prevUnused;
-		int programTerminated = domainStats[i].prevUnused > 0.0 && unusedDiff > domainStats[i].prevMemoryToAllocate;
+		int programTerminated = domainStats[i].prevUnused > 0.0 && unusedDiff > 200;
 		if (starvingVMs[i] && programTerminated)
 		{
 			domainStats[i].readyToRelease = 1;
