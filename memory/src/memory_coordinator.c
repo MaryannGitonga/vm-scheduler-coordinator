@@ -182,7 +182,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 				
 				// only allocate starving vm memory it requires to get to threshold
 				domainStats[i].memoryToAllocate = MIN(50.0, unusedDiff);
-				domainStats[i].memoryToAllocate = MIN(unusedThreshold - domainStats[i].unused, domainStats[i].memoryToAllocate) * 2;
+				domainStats[i].memoryToAllocate = MIN(unusedThreshold - domainStats[i].unused, domainStats[i].memoryToAllocate) * 3;
 				printf("Memory allocatable for starving domain %d...%2f\n", i, domainStats[i].memoryToAllocate);
 				starvingVMs[i] = 1;
 				nStarvingVMs += 1;
