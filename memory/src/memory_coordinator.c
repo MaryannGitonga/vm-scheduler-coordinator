@@ -156,7 +156,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 		domainStats[i].actual = actual;
         domainStats[i].unused = unused;
         domainStats[i].maxLimit = maxLimit;
-		domainStats[i].prevMemoryToAllocate = domainStats[i].memoryToAllocate;
+		domainStats[i].prevMemoryToAllocate = domainStats[i].memoryToAllocate != 0;
 
 		printf("Memory (VM %d) Actual: [%.2f MB], PrevActual: [%.2f MB], Unused: [%.2f MB], PrevUnused: [%.2f MB] MaxLimit: [%.2f MB]\n", i, domainStats[i].actual, domainStats[i].prevActual, domainStats[i].unused, domainStats[i].prevUnused, domainStats[i].maxLimit);
 		
@@ -310,19 +310,19 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 					domainStats[i].readyToRelease = (domainStats[i].actual != lowestVMMemory);
 					printf("Bloated domain %d now has memory of %.2f MB after releasing memory, ready to release %d\n", i, domainStats[i].actual, domainStats[i].readyToRelease);
 				}
-				else {
-					printf("Domain %d: starving %d: memory: %.2f: attained max: %d: lowest memory: %.2f MB\n", i, starvingVMs[i], domainStats[i].actual, domainStats[i].readyToRelease, lowestVMMemory);
-					if (nStarvingVMs > 1)
-					{
-						starvingVMs[i] = 0; // vm is no longer starving
-						nStarvingVMs -= 1;
-						continue;
-					}
-
+			} else 
+			{
+				printf("Domain %d: starving %d: memory: %.2f: attained max: %d: lowest memory: %.2f MB\n", i, starvingVMs[i], domainStats[i].actual, domainStats[i].readyToRelease, lowestVMMemory);
+				if (nStarvingVMs > 1)
+				{
 					starvingVMs[i] = 0; // vm is no longer starving
 					nStarvingVMs -= 1;
-					break;
+					continue;
 				}
+
+				starvingVMs[i] = 0; // vm is no longer starving
+				nStarvingVMs -= 1;
+				break;
 			}
 		}
 		
