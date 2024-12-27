@@ -1,38 +1,22 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<libvirt/libvirt.h>
-#include<math.h>
-#include<string.h>
-#include<unistd.h>
-#include<limits.h>
-#include<signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <libvirt/libvirt.h>
+#include <math.h>
+#include <string.h>
+#include <unistd.h>
+#include <limits.h>
+#include <signal.h>
+#include <memory_coordinator.h>
+
 #define MIN(a,b) ((a)<(b)?a:b)
 #define MAX(a,b) ((a)>(b)?a:b)
 
 int is_exit = 0; // DO NOT MODIFY THE VARIABLE
-typedef struct {
-    double actual;
-    double prevActual;
-    double unused;
-	double prevUnused;
-    double maxLimit;
-	int readyToRelease;
-	double memoryToAllocate;
-	int prevStarving;
-} DomainMemoryStats;
-
 DomainMemoryStats *domainStats = NULL;
 int *starvingVMs = NULL;
 int nStarvingVMs = 0;
 double lowerBoundMemory = 200.0;
 double unusedThreshold = 100.0;
-
-void cleanUp() {
-	free(domainStats);
-	free(starvingVMs);
-}
-
-void MemoryScheduler(virConnectPtr conn,int interval);
 
 /*
 DO NOT CHANGE THE FOLLOWING FUNCTION
@@ -87,7 +71,7 @@ COMPLETE THE IMPLEMENTATION
 void MemoryScheduler(virConnectPtr conn, int interval)
 {
 	printf("Scheduler started...\n");
-	virDomainPtr *domains, domain;
+	virDomainPtr *domains = NULL;
 	int ndomains;
 	unsigned long long hostFreeMemory;
 
@@ -129,7 +113,7 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	for (int i = 0; i < ndomains; i++)
 	{
-		domain = domains[i];
+		virDomainPtr domain = domains[i];
 
         double maxLimit = 0;
         maxLimit = virDomainGetMaxMemory(domain) / 1024;
@@ -325,4 +309,9 @@ void MemoryScheduler(virConnectPtr conn, int interval)
 
 	free(domains);
 	
+}
+
+void cleanUp() {
+	free(domainStats);
+	free(starvingVMs);
 }

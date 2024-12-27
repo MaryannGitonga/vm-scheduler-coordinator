@@ -1,105 +1,17 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include<libvirt/libvirt.h>
-#include<math.h>
-#include<string.h>
-#include<unistd.h>
-#include<limits.h>
-#include<signal.h>
-#define MIN(a,b) ((a)<(b)?a:b)
-#define MAX(a,b) ((a)>(b)?a:b)
-
-typedef struct
-{
-	double usage;
-	double *prevTimes;
-	unsigned char cpumap;
-	int pinnedPcpu;
-} DomainCPUStats;
-
-double getStdDev(double *values, int nvalues, double *meanOut) {
-	// calculate mean
-	double mean = 0;
-	for (int i = 0; i < nvalues; i++) {
-		mean += values[i];
-	}
-
-	mean = mean / nvalues;
-
-	if (meanOut != NULL) {
-		*meanOut = mean;
-	}
-
-	double sumSquareDiffs = 0;
-	for (int i = 0; i < nvalues; i++) {
-		sumSquareDiffs += (values[i] - mean) * (values[i] - mean);
-	}
-
-	double meanSquareDiff = sumSquareDiffs / nvalues;
-	double stdev = sqrt(meanSquareDiff);
-	return stdev;
-}
-
-int areCpusBalanced(double *cpuUsages, int ncpus, double *meanOut, double *stdDevOut) {
-	double stdDev = getStdDev(cpuUsages, ncpus, meanOut);
-	printf("Standard dev: %2f\n", stdDev);
-	if (stdDevOut != NULL) {
-		*stdDevOut = stdDev;
-	}
-	return stdDev <= 0.05;
-}
-
-int DomainCPUStats_initializeForDomain(DomainCPUStats *domainStats, int npcpus) {
-	domainStats->prevTimes = calloc(npcpus, sizeof(double));
-	if (domainStats->prevTimes == NULL) {
-		return -1;
-	}
-
-	return 0;
-}
-
-void DomainCPUStats_deinitializeForDomain(DomainCPUStats *domainStats) {
-	if (domainStats->prevTimes != NULL) {
-		free(domainStats->prevTimes);
-	}
-}
-
-void DomainCPUStats_free(DomainCPUStats *stats, int ndomains) {
-	for (int i = 0; i < ndomains; i++) {
-		DomainCPUStats_deinitializeForDomain(&stats[i]);
-	}
-
-	free(stats);
-}
-
-DomainCPUStats* DomainCPUStats_create(int ndomains, int ncpus) {
-	DomainCPUStats *stats = calloc(ndomains, sizeof(DomainCPUStats));
-	if (stats == NULL) {
-		printf("Failed to create domain stats\n");
-		DomainCPUStats_free(stats, ndomains);
-		return NULL;
-	}
-
-	for (int i = 0; i < ndomains; i++) {
-		if (DomainCPUStats_initializeForDomain(&stats[i], ncpus) == -1)
-		{
-			printf("Failed to create domain stats\n");
-			DomainCPUStats_free(stats, ndomains);
-			return NULL;
-		}
-	}
-
-	return stats;
-}
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#include <unistd.h>
+#include <limits.h>
+#include <signal.h>
+#include <vcpu_scheduler.h>
 
 DomainCPUStats *domainStats = NULL;
 int ndomains;
 int firstIteration = 1;
 
-
 int is_exit = 0; // DO NOT MODIFY THIS VARIABLE
-
-void CPUScheduler(virConnectPtr conn,int interval);
 
 /*
 DO NOT CHANGE THE FOLLOWING FUNCTION
@@ -153,7 +65,7 @@ int main(int argc, char *argv[])
 void CPUScheduler(virConnectPtr conn, int interval)
 {
 	printf("Scheduler started...\n");
-	virDomainPtr *domains, domain;
+	virDomainPtr *domains = NULL;
 	int result, nparams, npcpus;
 	virTypedParameterPtr params;
 	double *plannedUsage = NULL;
@@ -187,7 +99,7 @@ void CPUScheduler(virConnectPtr conn, int interval)
 	
 
 	for (int i = 0; i < ndomains; i++) {
-		domain = domains[i];
+		virDomainPtr domain = domains[i];
 
 		nparams = virDomainGetCPUStats(domain, NULL, 0, 0, 1, 0);
 		if (nparams < 0)
@@ -363,4 +275,79 @@ done:
 	free(domainUsage);
 	free(pcpuUsage);
 	free(domains);
+}
+
+double getStdDev(double *values, int nvalues, double *meanOut) {
+	// calculate mean
+	double mean = 0;
+	for (int i = 0; i < nvalues; i++) {
+		mean += values[i];
+	}
+
+	mean = mean / nvalues;
+
+	if (meanOut != NULL) {
+		*meanOut = mean;
+	}
+
+	double sumSquareDiffs = 0;
+	for (int i = 0; i < nvalues; i++) {
+		sumSquareDiffs += (values[i] - mean) * (values[i] - mean);
+	}
+
+	double meanSquareDiff = sumSquareDiffs / nvalues;
+	double stdev = sqrt(meanSquareDiff);
+	return stdev;
+}
+
+int areCpusBalanced(double *cpuUsages, int ncpus, double *meanOut, double *stdDevOut) {
+	double stdDev = getStdDev(cpuUsages, ncpus, meanOut);
+	printf("Standard dev: %2f\n", stdDev);
+	if (stdDevOut != NULL) {
+		*stdDevOut = stdDev;
+	}
+	return stdDev <= 0.05;
+}
+
+int DomainCPUStats_initializeForDomain(DomainCPUStats *domainStats, int npcpus) {
+	domainStats->prevTimes = calloc(npcpus, sizeof(double));
+	if (domainStats->prevTimes == NULL) {
+		return -1;
+	}
+
+	return 0;
+}
+
+void DomainCPUStats_deinitializeForDomain(DomainCPUStats *domainStats) {
+	if (domainStats->prevTimes != NULL) {
+		free(domainStats->prevTimes);
+	}
+}
+
+void DomainCPUStats_free(DomainCPUStats *stats, int ndomains) {
+	for (int i = 0; i < ndomains; i++) {
+		DomainCPUStats_deinitializeForDomain(&stats[i]);
+	}
+
+	free(stats);
+}
+
+DomainCPUStats* DomainCPUStats_create(int ndomains, int ncpus) {
+	DomainCPUStats *stats = calloc(ndomains, sizeof(DomainCPUStats));
+	if (stats == NULL) {
+		printf("Failed to create domain stats\n");
+		DomainCPUStats_free(stats, ndomains);
+		return NULL;
+	}
+
+	for (int i = 0; i < ndomains; i++) {
+		if (DomainCPUStats_initializeForDomain(&stats[i], ncpus) == -1)
+		{
+			printf("Failed to create domain stats\n");
+			DomainCPUStats_free(stats, ndomains);
+			return NULL;
+		}
+	}
+
+	return stats;
 }
