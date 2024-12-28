@@ -1,6 +1,6 @@
 # VM CPU Scheduler and Memory Coordinator
 
-This project provides a simple implementation of a [virtual CPU (vCPU)](https://github.com/MaryannGitonga/vm-scheduler-coordinator/tree/main/cpu) scheduler and [memory coordinator](https://github.com/MaryannGitonga/vm-scheduler-coordinator/tree/main/memory) in C, designed to dynamically manage resources for guest virtual machines (VMs). The focus is on balancing CPU workloads across physical CPUs (pCPUs) and managing memory allocation based on VM utilization.
+This project provides a simple implementation of a [virtual CPU (vCPU) scheduler](https://github.com/MaryannGitonga/vm-scheduler-coordinator/tree/main/cpu) and [memory coordinator](https://github.com/MaryannGitonga/vm-scheduler-coordinator/tree/main/memory) in C, designed to dynamically manage resources for guest virtual machines (VMs). The focus is on balancing CPU workloads across physical CPUs (pCPUs) and managing memory allocation based on VM utilization.
 
 ## Overview
 
